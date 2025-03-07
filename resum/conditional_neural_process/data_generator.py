@@ -51,7 +51,7 @@ class HDF5Dataset(IterableDataset):
         # Total row cycles per file to complete an epoch
         self.nrows = self.get_max_number_of_rows()
         self.total_cycles_per_epoch = self.nrows // self.rows_per_file  # nrows / k rows per batch = c cycles per full dataset pass
-        
+
     def shuffle_files(self):
         """Shuffle the file order at the start of each full dataset pass (epoch)."""
         random.shuffle(self.files)
@@ -81,12 +81,12 @@ class HDF5Dataset(IterableDataset):
     def __iter__(self):
         #print(f"Starting structured HDF5 loading for row block {self.epoch_counter}...")
         self.total_batches = 0
-        batch_idx = 0
+        cycle_idx = 0
         used_rows = 0  # Track number of rows used
 
-        while batch_idx < self.total_cycles_per_epoch:
-            
+        while cycle_idx < self.total_cycles_per_epoch:
             for i in range(0, len(self.files), self.files_per_batch):  # Loop over file chunks
+                
                 if i == 0  and self.epoch_counter==0:
                     self.phi_selected_indices=utils.read_selected_indices(self.files[0],self.parameters['phi'])
                     self.theta_selected_indices=utils.read_selected_indices(self.files[0],self.parameters['theta'])
@@ -94,10 +94,12 @@ class HDF5Dataset(IterableDataset):
 
                 batch = []
                 selected_files = self.files[i:i + self.files_per_batch]
+
                 # Select the next sequential k rows per file
                 start_idx = self.epoch_counter * self.rows_per_file
                 end_idx = start_idx + self.rows_per_file
-                for file in selected_files:
+
+                for j, file in enumerate(selected_files):
                     with h5py.File(file, "r") as hdf:
                         phi=hdf[self.parameters['phi']['key']][start_idx:end_idx, self.phi_selected_indices]
                         if  len(hdf[self.parameters['theta']['key']][:].shape) == 1:
@@ -106,23 +108,31 @@ class HDF5Dataset(IterableDataset):
                         else:
                             theta = hdf[self.parameters['theta']['key']][start_idx:end_idx, self.theta_selected_indices]
                         features = np.hstack([theta, phi])
-                        target=hdf[self.parameters['target']['key']][start_idx:end_idx, self.target_selected_indices]
-                        
+
+                        if np.ndim(hdf[self.parameters['target']['key']]) > 1:
+                            target=hdf[self.parameters['target']['key']][start_idx:end_idx, self.target_selected_indices]
+                        else:
+                            target=hdf[self.parameters['target']['key']][start_idx:end_idx]
+                            target=target.reshape(-1, 1)
+
                         # Stack rows from this file
                         file_data = np.hstack([features, target])
+
                         batch.extend(file_data.tolist())
 
                         used_rows += len(file_data)
-
+                # end loop over single file
                 # Yield batch of batch-size shuffled samples
                 random.shuffle(batch)
                 yield torch.tensor(batch, dtype=torch.float32)
-
-                batch_idx += 1
+                self.total_batches += 1
+            # end loop over file chunk
+            cycle_idx += 1
 
             # Move to next row block
             self.epoch_counter += 1
-            self.total_batches += batch_idx+1
+            self.total_batches += cycle_idx+1
+            # end loop of row chunk after all files read in
 
             # If all files and rows (from k*i to k*(i+1)) are read, reshuffle files for the row block
             if self.epoch_counter >= self.total_cycles_per_epoch:
@@ -222,7 +232,7 @@ class DataGeneration(object):
                 column_name, operator, value = match.groups()
                 if column_name not in columns:
                     raise ValueError(f"Column {column_name} not found in target!")
-
+                
                 column_idx = columns.index(column_name)  # Get the column index
 
                 # Convert condition string to a lambda function
@@ -233,8 +243,12 @@ class DataGeneration(object):
 
             for cond_str in condition_strings:
                 col_idx, cond_func = parse_condition(cond_str, names_target_tmp)  # Get index and condition
-                conditions &= cond_func(target[:, col_idx])  # Apply condition to the correct dimension
 
+                if np.ndim(target) > 1:
+                    conditions &= cond_func(target[:, col_idx])  # Apply condition to the correct dimension
+                else:
+                    conditions &= cond_func(target[:])
+            
             # Find matching indices
             signal_indices = np.where(conditions)[0]
             # All indices in the dataset
