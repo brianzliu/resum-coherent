@@ -89,7 +89,6 @@ class HDF5Dataset(IterableDataset):
                 
                 if i == 0  and self.epoch_counter==0:
                     self.phi_selected_indices=utils.read_selected_indices(self.files[0],self.parameters['phi'])
-                    print("parameters", len(self.parameters['theta']['selected_labels']))
                     if len(self.parameters['theta']['selected_labels'])> 0:
                         self.theta_selected_indices=utils.read_selected_indices(self.files[0],self.parameters['theta'])
                     if len(self.parameters['target']['selected_labels'])> 0:
