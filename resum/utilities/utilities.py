@@ -148,7 +148,7 @@ def read_selected_indices(hdf5_file, label_dict):
                 selected_indices = [labels.index(label) for label in selected_labels if label in labels]
 
             if not selected_indices:
-                raise ValueError(f"None of the requested labels {selected_labels} exist in phi_labels!")
+                raise ValueError(f"None of the requested labels {selected_labels} exist in {label_dict['key']}!")
             return sorted(selected_indices)
 
 def get_all_signal_events(filename_base, nrows):
