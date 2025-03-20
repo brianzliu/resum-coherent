@@ -1,5 +1,5 @@
 cnp_settings:
-  training_epochs: 5
+  training_epochs: 1
   context_ratio: 0.3333333
   context_is_subset: True
   batch_size: 3000
@@ -16,7 +16,7 @@ cnp_settings:
 simulation_settings:
   theta_headers: ["radius","thickness","npanels","theta","length"]
   phi_labels: ["r_0[m]","z_0[m]","time_t[ms]","r_t[m]","z_t[m]","L_t[m]","ln(E0vsET)","edep_t[eV]","nsec"]
-  target_label: ["nC_Ge77"]
+  target_label: ["nC_Ge77","total_nC_Ge77[cts]"]
   signal_condition: ["nC_Ge77==1"]
   weights_labels: ["nC_Ge77_scaling"]
   y_raw_cnp: total_nC_Ge77[cts]
@@ -28,9 +28,9 @@ simulation_settings:
   nsamples_hf: 10000000
 
 path_settings:
-  path_to_training_files: ./in/data/lf/v1.0/
-  path_to_test_files_lf: ./in/data/lf/v1.0/
-  path_to_test_files_hf: ./in/data/hf/v1.0/
-  path_out:  ./out/cnp
+  path_to_training_files: ./legend-neutron-moderator/in/data/lf/
+  path_to_test_files_lf: ./legend-neutron-moderator/in/data/lf/
+  path_to_test_files_hf: ./legend-neutron-moderator/in/data/hf/
+  path_out:  ./legend-neutron-moderator/out/cnp
   f_out: CNPGauss_v1.6_3540_c1000_t2000_beta_0.1_0.1
-  path_to_model: ./out/cnp
+  path_to_model: ./legend-neutron-moderator/out/cnp

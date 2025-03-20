@@ -1,0 +1,34 @@
+cnp_settings:
+  training_epochs: 1
+  context_ratio: 0.3333333
+  context_is_subset: True
+  batch_size: 100
+  files_per_batch: 1
+  number_of_walkers: 1
+  config_wise: False
+  version: v1.6
+  use_data_augmentation: mixup #"smote" #False #"mixup"
+  use_beta: [0.1,0.1] # uniform => None, beta => [a,b] U-shape [0.1,0.1] Uniform [1.,1.] falling [0.2,0.5] rising [0.2,0.5]
+  signal_to_background_ratio: "" # "_1to4" # used for smote augmentation
+  ratio_testing_vs_training: 1/40
+  plot_after: 500
+
+simulation_settings:
+  theta_headers: []
+  phi_labels: ["evtid","nC_x","nC_y","nC_z","nC_material","nC_global_time","nC_gamma_amount","nC_gamma_total_energy"]
+  target_label: columns[:2]
+  y_raw_cnp: photon_hits
+  y_raw_data_gen: photon_hits
+  version_lf: v1.0
+  version_hf: v1.0
+  file_prefix: neutron
+  nsamples_lf: 50000
+  nsamples_hf: 10000000
+
+path_settings:
+  path_to_training_files: ./in/data/lf/
+  path_to_test_files_lf: ./in/data/lf/
+  path_to_test_files_hf: ./in/data/hf/
+  path_out:  ./out/cnp
+  f_out: CNPGauss_v1.6_3540_c1000_t2000_beta_0.1_0.1
+  path_to_model: ./out/cnp
