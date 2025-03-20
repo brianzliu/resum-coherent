@@ -180,6 +180,41 @@ def get_all_signal_events(filename_base, nrows):
     # Output the result
     print(f"Total rows with y(x) = 1: {x_lf_sig_all.shape[0]}")
 
+def parse_slice_string(command):
+    # Example input: "columns[:500]"
+    
+    # Strip the prefix and get the inside of the brackets
+    if not command.startswith("columns[") or not command.endswith("]"):
+        raise ValueError("Invalid format")
+
+    slice_str = command[len("columns["):-1]  # Extract between brackets, e.g., ":500"
+    parts = slice_str.split(':')
+
+    # Convert each part to int or None if empty
+    def parse_part(part):
+        return int(part) if part.strip() != '' else 0
+
+    start = parse_part(parts[0]) if len(parts) > 0 and parse_part(parts[0]) > 0 else 0
+    end = parse_part(parts[1]) if len(parts) > 0 and parse_part(parts[1])>0 else -1
+    return [start, end]
+
+def get_feature_and_label_size(config_file):
+    x_size = len(config_file["simulation_settings"]["theta_headers"]+config_file["simulation_settings"]["phi_labels"])
+    name_y =config_file["simulation_settings"]["target_label"]
+
+    if isinstance(name_y,str):
+        if name_y:
+            tmp=parse_slice_string(name_y)
+            if tmp[1] < 1 :
+                raise ValueError('Missing target size (y_size): please specify it in the target label name using the format "columns[:y_size]" in your settings file.')
+            y_size=tmp[1]-tmp[0]
+        else:
+            y_size = 1
+    else:
+        y_size = len(name_y)
+    
+    return [x_size, y_size]
+
 def INFO(output):
     try:
         print(colored('[INFO] '+output, 'green'))

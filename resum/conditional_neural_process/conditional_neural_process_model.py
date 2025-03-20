@@ -14,9 +14,9 @@ class DeterministicEncoder(nn.Module):
         """Encodes the inputs into one representation.
 
         Args:
-        context_x: Tensor of size of batches x observations x m_ch. For this 1D regression
+        context_x: Tensor of size of batches x observations x m_ch. For this regression
           task this corresponds to the x-values.
-        context_y: Tensor of size bs x observations x d_ch. For this 1D regression
+        context_y: Tensor of size bs x observations x d_ch. For this regression
           task this corresponds to the y-values.
 
         Returns:
@@ -42,7 +42,7 @@ class DeterministicEncoder(nn.Module):
         # Aggregator: take the mean over all points
         representation = hidden.mean(dim=1)
         return representation
-
+"""
 def sigmoid_expectation(mu, sigma):
     # Bound the variance
     sigma = 0.1 + 0.9*torch.nn.functional.softplus(sigma)
@@ -59,6 +59,22 @@ def sigmoid_expectation(mu, sigma):
     #tmp = torch.where(var==0.,1.e-4,0.)
     #var = torch.add(expectation, tmp)
     
+    return expectation, var
+"""
+def sigmoid_expectation(mu, sigma):
+    # Bound the variance
+    sigma = 0.1 + 0.9 * F.softplus(sigma)
+
+    # Calculate y = sqrt(1 + 3 / pi^2 * sigma^2)
+    y = torch.sqrt(1. + 3. / (np.pi ** 2) * sigma ** 2)
+
+    # Prevent division by zero
+    y = torch.clamp(y, min=1e-4)
+
+    # Calculate expectation and variance
+    expectation = torch.sigmoid(mu / y)
+    var = expectation * (1. - expectation) * (1. - (1. / y))
+
     return expectation, var
 
 class DeterministicDecoder(nn.Module):
@@ -103,8 +119,9 @@ class DeterministicDecoder(nn.Module):
         hidden = hidden.view(batch_size, num_total_points, -1)
 
         # Get the mean an the variance
-        mu, sigma = torch.split(hidden, 1, dim=-1)
-        
+        #mu, sigma = torch.split(hidden, 1, dim=-1)
+        mu, sigma = torch.split(hidden, hidden.size(-1) // 2, dim=-1)
+
         # Map mu to a value between 0 and 1 and get the expectation and variance
         mu, sigma = sigmoid_expectation(mu, sigma)
 
@@ -113,7 +130,9 @@ class DeterministicDecoder(nn.Module):
         #sigma = torch.clamp(sigma, min=1e-4)  # OR
         sigma = F.softplus(sigma) + 1e-6
 
-        dist = torch.distributions.normal.Normal(loc=mu, scale=sigma)
+        #dist = torch.distributions.normal.Normal(loc=mu, scale=sigma)
+        dist = torch.distributions.Independent(torch.distributions.Normal(loc=mu, scale=sigma),reinterpreted_batch_ndims=1  # This assumes the last dim is your m-dim output
+        )
         return dist, mu, sigma
 
 class DeterministicModel(nn.Module):
