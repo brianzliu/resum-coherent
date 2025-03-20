@@ -145,7 +145,7 @@ class HDF5Dataset(IterableDataset):
 
             # If all files and rows (from k*i to k*(i+1)) are read, reshuffle files for the row block
             if self.epoch_counter >= self.total_cycles_per_epoch:
-                print("Finished full dataset pass. Starting new epoch! ",self.epoch_counter)
+                print("Finished full dataset pass. Starting new epoch! ")
                 self.shuffle_files()
                 break
 
@@ -331,7 +331,7 @@ class DataGeneration(object):
         # Split batch into input (X) and target (Y) features
         batch_x = batch[:,:self.feature_size]  # All features except last column (input features)
         batch_y = batch[:,self.feature_size:self.feature_size+self.target_size]   # Last column is the target (output values)
-        
+
         if context_is_subset:
             # **Context is taken as the first num_context points from target**
             batch_target_x = batch_x  # Target is the entire batch
