@@ -88,7 +88,7 @@ class DeterministicDecoder(nn.Module):
         for i in range(len(output_sizes) - 1):
             self.linears.append(nn.Linear(output_sizes[i], output_sizes[i + 1]))
 
-    def forward(self, representation, target_x):
+    def forward(self, representation, target_x, is_binary):
         """Decodes the individual targets.
 
         Args:
@@ -123,7 +123,8 @@ class DeterministicDecoder(nn.Module):
         mu, sigma = torch.split(hidden, hidden.size(-1) // 2, dim=-1)
 
         # Map mu to a value between 0 and 1 and get the expectation and variance
-        #mu, sigma = sigmoid_expectation(mu, sigma)
+        if is_binary==True:
+            mu, sigma = sigmoid_expectation(mu, sigma)
 
         # Get the distribution
         # Ensure scale is strictly positive before passing to Normal distribution
@@ -150,7 +151,7 @@ class DeterministicModel(nn.Module):
         self._encoder = DeterministicEncoder(encoder_sizes)
         self._decoder = DeterministicDecoder(decoder_sizes)
 
-    def forward(self, query, target_y=None):
+    def forward(self, query, target_y=None, is_binary=True):
         """Returns the predicted mean and variance at the target points.
 
         Args:
@@ -175,7 +176,7 @@ class DeterministicModel(nn.Module):
         # Pass query through the encoder and the decoder
 
         representation = self._encoder(context_x, context_y)
-        dist, mu, sigma = self._decoder(representation, target_x)
+        dist, mu, sigma = self._decoder(representation, target_x, is_binary)
         
         # If we want to calculate the log_prob for training we will make use of the
         # target_y. At test time the target_y is not available so we return None

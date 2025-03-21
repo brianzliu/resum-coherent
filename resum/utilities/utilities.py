@@ -74,15 +74,15 @@ def convert_single_csv_to_hdf5(csv_file, hdf5_file, theta_headers, target_label,
         """
         """
         # Read CSV file
-        df = pd.read_csv(csv_file, index_col=0)
-
+        df = pd.read_csv(csv_file)
         # **Extract 'theta' data**
-        
         theta_data = df[theta_headers].to_numpy()[0]
-        weights_data = df[weights_labels].to_numpy()
+        #weights_data = df[weights_labels].to_numpy()
         target_data = df[target_label].to_numpy()
         # **Extract 'phi' (all columns except theta_headers, 'target', 'weights')**
         phi_headers = [col for col in df.columns if col not in theta_headers + target_label + weights_labels + ['fidelity']]
+        #phi_headers = [col for col in df.columns if col not in theta_headers + target_label + weights_labels ]
+        
         phi_data = df[phi_headers].to_numpy()
 
         # Filter out non-existing columns from weights
