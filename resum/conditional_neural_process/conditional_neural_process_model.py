@@ -123,7 +123,7 @@ class DeterministicDecoder(nn.Module):
         mu, sigma = torch.split(hidden, hidden.size(-1) // 2, dim=-1)
 
         # Map mu to a value between 0 and 1 and get the expectation and variance
-        mu, sigma = sigmoid_expectation(mu, sigma)
+        #mu, sigma = sigmoid_expectation(mu, sigma)
 
         # Get the distribution
         # Ensure scale is strictly positive before passing to Normal distribution

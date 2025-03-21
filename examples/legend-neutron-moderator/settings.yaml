@@ -17,6 +17,7 @@ simulation_settings:
   theta_headers: ["radius","thickness","npanels","theta","length"]
   phi_labels: ["r_0[m]","z_0[m]","time_t[ms]","r_t[m]","z_t[m]","L_t[m]","ln(E0vsET)","edep_t[eV]","nsec"]
   target_label: ["nC_Ge77","total_nC_Ge77[cts]"]
+  target_is_binary: False
   signal_condition: ["nC_Ge77==1"]
   weights_labels: ["nC_Ge77_scaling"]
   y_raw_cnp: total_nC_Ge77[cts]

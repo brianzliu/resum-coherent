@@ -6,31 +6,32 @@ import os
 from . import plotting_utils as plotting
 
 def plot(prediction_y_training, target_y_training, loss_training, prediction_y_testing, target_y_testing,  loss_testing, it=None):
-        
-        index_list_1 = np.where(target_y_testing > 0.5)[0]
+        max_target_y_testing=max(target_y_testing)
+        index_list_1 = np.where(target_y_testing > 0.5*max_target_y_testing)[0]
         target_signal_testing = np.array([target_y_testing[i] for i in index_list_1])
         prediction_signal_testing = np.array([prediction_y_testing[i] for i in index_list_1])
         target_bkg_testing = np.delete(target_y_testing, index_list_1)
         prediction_bkg_testing = np.delete(prediction_y_testing, index_list_1)
 
         #######################
-        index_list_2 = np.where(target_y_training > 0.5)[0]
+        max_target_y_training=max(target_y_training)
+        index_list_2 = np.where(target_y_training > 0.5*max_target_y_training)[0]
         target_signal_training = np.array([target_y_training[i] for i in index_list_2])
         prediction_signal_training = np.array([prediction_y_training[i] for i in index_list_2])
         target_bkg_training = np.delete(target_y_training, index_list_2)
-        prediction_bkg_training = np.delete(prediction_y_training, index_list_2)
+        prediction_bkg_training = np.delete(prediction_y_training, index_list_2)  
 
         fig, ax = plt.subplots(ncols=2, figsize=(10, 4))
         if it != None:
                 fig.suptitle(f'Training Iteration {it}', fontsize=10)
         # plot testing 
-        bins = 100 
+        bins = int(100*max_target_y_testing)
         if len(target_signal_testing)>0:
-                ax[1].hist(target_signal_testing, range=[0.0, 1.0],bins=bins, color='orangered', alpha=1.0, label='label (signal)')
-        ax[1].hist(target_bkg_testing, range=[0.0, 1.0],bins=bins, color=(3/255,37/255,46/255), alpha=0.8, label='label (bkg)')
-        ax[1].hist(prediction_bkg_testing, range=[0.0, 1.0],bins=bins, color=(113/255,150/255,159/255), alpha=0.8, label='network (bkg)')
+                ax[1].hist(target_signal_testing, range=[0.0, max_target_y_testing],bins=bins, color='orangered', alpha=1.0, label='label (signal)')
+        ax[1].hist(target_bkg_testing, range=[0.0, max_target_y_testing],bins=bins, color=(3/255,37/255,46/255), alpha=0.8, label='label (bkg)')
+        ax[1].hist(prediction_bkg_testing, range=[0.0, max_target_y_testing],bins=bins, color=(113/255,150/255,159/255), alpha=0.8, label='network (bkg)')
         if len(target_signal_training)>0:
-                ax[1].hist(prediction_signal_testing, range=[0.0, 1.0],bins=bins,  color='coral', alpha=0.8,label='network (signal)')    
+                ax[1].hist(prediction_signal_testing, range=[0.0, max_target_y_testing],bins=bins,  color='coral', alpha=0.8,label='network (signal)')    
        
 
         ax[1].set_yscale('log')
@@ -40,13 +41,16 @@ def plot(prediction_y_training, target_y_training, loss_training, prediction_y_t
         #ax[1].legend(loc='bottom left', bbox_to_anchor=(0, -1.5))
         #ax[1].text(0.35,-0.25, f'Test data {Counter([i[0] for i in target_y_testing])}', fontsize=8.5, transform=ax[1].transAxes)
 
+                      
+
         #plot training
+        bins = int(100*max_target_y_training)
         if len(target_signal_training)>0:
-                ax[0].hist(target_signal_training, range=[0.0, 1.0],bins=bins, color='orangered', alpha=1.0, label='label (signal)')
-        ax[0].hist(target_bkg_training, range=[0.0, 1.0],bins=bins, color=(3/255,37/255,46/255), alpha=0.8, label='label (bkg)')
-        ax[0].hist(prediction_bkg_training, range=[0.0, 1.0],bins=bins, color=(113/255,150/255,159/255), alpha=0.8, label='network (bkg)')
+                ax[0].hist(target_signal_training, range=[0.0, max_target_y_training],bins=bins, color='orangered', alpha=1.0, label='label (signal)')
+        ax[0].hist(target_bkg_training, range=[0.0, max_target_y_training],bins=bins, color=(3/255,37/255,46/255), alpha=0.8, label='label (bkg)')
+        ax[0].hist(prediction_bkg_training, range=[0.0, max_target_y_training],bins=bins, color=(113/255,150/255,159/255), alpha=0.8, label='network (bkg)')
         if len(target_signal_training)>0:
-                ax[0].hist(prediction_signal_training, range=[0.0, 1.0],bins=bins, color='coral', alpha=0.8, label='network (signal)')
+                ax[0].hist(prediction_signal_training, range=[0.0, max_target_y_training],bins=bins, color='coral', alpha=0.8, label='network (signal)')
         
         ax[0].set_yscale('log')
         ax[0].set_ylabel("Count")
