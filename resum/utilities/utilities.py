@@ -215,6 +215,68 @@ def get_feature_and_label_size(config_file):
     
     return [x_size, y_size]
 
+def split_file_into_chunks(input_file, output_dir, chunk_size=50000):
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Open the input HDF5 file
+    with h5py.File(input_file, 'r') as f_in:
+        
+        all_keys = list(f_in.keys())
+
+        # Separate datasets into splittable and singleton
+        splittable_keys = []
+        singleton_keys = []
+
+        for key in all_keys:
+            dataset = f_in[key]
+            shape = dataset.shape
+
+            # Assumes you split datasets with more than 1 row (axis 0)
+            if len(shape) == 1:
+                singleton_keys.append(key)
+            elif shape[0] > 1:
+                splittable_keys.append(key)
+
+        print(f"Splittable datasets (many rows): {splittable_keys}")
+        print(f"Singleton datasets (single row): {singleton_keys}")
+
+        # Determine row count for splitting from first splittable dataset
+        total_rows = f_in[splittable_keys[0]].shape[0]
+
+        # Calculate number of chunks
+        num_chunks = total_rows // chunk_size + int(total_rows % chunk_size > 0)
+
+        for chunk_idx in range(num_chunks):
+            start = chunk_idx * chunk_size
+            end = min((chunk_idx + 1) * chunk_size, total_rows)
+
+            chunk_file = os.path.join(output_dir, f'chunk_{chunk_idx}.h5')
+
+            with h5py.File(chunk_file, 'w') as f_out:
+                
+                # Write splittable datasets as slices
+                for key in splittable_keys:
+                    dataset = f_in[key]
+                    data_chunk = dataset[start:end]
+
+                    f_out.create_dataset(
+                        key,
+                        data=data_chunk,
+                        compression='gzip'  # optional compression
+                    )
+
+                # Copy singleton datasets as-is
+                for key in singleton_keys:
+                    dataset = f_in[key]
+                    data_single = dataset  # read the whole dataset, shape will be (1, N)
+
+                    f_out.create_dataset(
+                        key,
+                        data=data_single,
+                        compression='gzip'  # optional compression
+                    )
+
 def INFO(output):
     try:
         print(colored('[INFO] '+output, 'green'))

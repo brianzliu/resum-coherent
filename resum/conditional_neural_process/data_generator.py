@@ -126,7 +126,9 @@ class HDF5Dataset(IterableDataset):
                             target=target.reshape(-1, 1)
 
                         # Stack rows from this file
+
                         file_data = np.hstack([features, target])
+
                         batch.extend(file_data.tolist())
                         used_rows += len(file_data)
                 # end loop over single file

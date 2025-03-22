@@ -25,7 +25,7 @@ def plot(prediction_y_training, target_y_training, loss_training, prediction_y_t
         if it != None:
                 fig.suptitle(f'Training Iteration {it}', fontsize=10)
         # plot testing 
-        bins = int(100*target_range[1])
+        bins = int(100)
         if len(target_signal_testing)>0:
                 ax[1].hist(target_signal_testing, range=target_range,bins=bins, color='orangered', alpha=1.0, label='label (signal)')
         ax[1].hist(target_bkg_testing, range=target_range,bins=bins, color=(3/255,37/255,46/255), alpha=0.8, label='label (bkg)')
@@ -44,7 +44,7 @@ def plot(prediction_y_training, target_y_training, loss_training, prediction_y_t
                       
 
         #plot training
-        bins = int(100*target_range[1])
+        bins = int(100)
 
         if len(target_signal_training)>0:
                 ax[0].hist(target_signal_training, range=target_range,bins=bins, color='orangered', alpha=1.0, label='label (signal)')
