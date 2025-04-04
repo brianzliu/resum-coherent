@@ -200,7 +200,7 @@ def parse_slice_string(command):
 
 def get_feature_and_label_size(config_file):
     x_size = len(config_file["simulation_settings"]["theta_headers"]+config_file["simulation_settings"]["phi_labels"])
-    name_y =config_file["simulation_settings"]["target_label"]
+    name_y =config_file["simulation_settings"]["target_headers"]
 
     if isinstance(name_y,str):
         if name_y:

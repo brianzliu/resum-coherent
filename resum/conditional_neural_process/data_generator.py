@@ -13,7 +13,6 @@ import yaml
 import itertools
 import h5py
 from torch.utils.data import DataLoader, IterableDataset
-
 from ..utilities import utilities as utils
 import random
 
@@ -25,7 +24,7 @@ class HDF5Dataset(IterableDataset):
                 files_per_batch=20,
                 parameters = {'phi': {'key': "phi",'label_key': "phi_labels",'selected_labels': None},
                               'theta': {'key': "theta",'label_key': "theta_headers",'selected_labels': None},
-                              'target': {'key': "target",'label_key': "target_labels",'selected_labels': None}}
+                              'target': {'key': "target",'label_key': "target_headers",'selected_labels': None}}
         ):
         """
         - hdf5_dir: Directory containing HDF5 files.
@@ -86,7 +85,6 @@ class HDF5Dataset(IterableDataset):
 
         while cycle_idx < self.total_cycles_per_epoch:
             for i in range(0, len(self.files), self.files_per_batch):  # Loop over file chunks
-                
                 if i == 0  and self.epoch_counter==0:
                     self.phi_selected_indices=utils.read_selected_indices(self.files[0],self.parameters['phi'])
                     if len(self.parameters['theta']['selected_labels'])> 0:
@@ -177,7 +175,7 @@ class DataGeneration(object):
         _target_key="target"
         _names_theta=config_file["simulation_settings"]["theta_headers"]
         _names_phi=config_file["simulation_settings"]["phi_labels"]
-        self._names_target =config_file["simulation_settings"]["target_label"]
+        self._names_target =config_file["simulation_settings"]["target_headers"]
         self.feature_size,self.target_size=utils.get_feature_and_label_size(config_file)
         
         if not any(f.endswith(".h5") for f in os.listdir(path_to_files)):
@@ -195,7 +193,7 @@ class DataGeneration(object):
 
         self.parameters={'phi': {'key': _phi_key,'label_key': "phi_labels",'selected_labels': _names_phi}, 
                         'theta': {'key': _theta_key,'label_key': "theta_headers",'selected_labels': _names_theta}, 
-                        'target': {'key': _target_key,'label_key': "target_labels",'selected_labels': self._names_target}}
+                        'target': {'key': _target_key,'label_key': "target_headers",'selected_labels': self._names_target}}
 
     def set_loader(self):
         dataset = HDF5Dataset(self.path_to_files, self._batch_size, files_per_batch=self.config_file["cnp_settings"]["files_per_batch"], parameters=self.parameters)
@@ -221,11 +219,11 @@ class DataGeneration(object):
         np.random.seed(seed)  # Set the seed for reproducibility
         with h5py.File(filename, "a") as f:  # Open in append mode
             # Check if mixup datasets already exist
-            if "phi_mixedup" in f and "target_mixedup" in f:
-                if "signal_condition" in f:
-                    existing_conditions = [s.decode("utf-8") for s in f["signal_condition"][:]]
-                    if existing_conditions == condition_strings:
-                        return
+            #if "phi_mixedup" in f and "target_mixedup" in f:
+            #    if "signal_condition" in f:
+            #        existing_conditions = [s.decode("utf-8") for s in f["signal_condition"][:]]
+            #        if existing_conditions == condition_strings:
+            #            return
             phi = np.array(f["phi"])  # Feature data
             target = np.array(f["target"])  # Labels
             has_weights = "weights" in f  # Check if "weights" dataset exists
@@ -233,9 +231,13 @@ class DataGeneration(object):
 
             # Identify background (0) and signal (1) indices
             background_indices = np.where(target == 0)[0]
-            names_target_tmp=[label.decode("utf-8") if isinstance(label, bytes) else label for label in self._names_target]
+            all_target_names = f["target_headers"][:]
+            all_target_names=[label.decode("utf-8") for label in all_target_names]
+
             # Function to parse condition strings dynamically
+            '''
             def parse_condition(condition_str, columns):
+                print(condition_str, columns)
                 """Parses condition strings and returns (column index, condition lambda)."""
                 match = re.match(r"(\S+)\s*(==|!=|<=|>=|<|>)\s*(\S+)", condition_str)
                 if not match:
@@ -249,12 +251,46 @@ class DataGeneration(object):
 
                 # Convert condition string to a lambda function
                 return column_idx, lambda x: eval(f"x {operator} {value}", {"x": x})
+            '''
 
+            def parse_condition(condition_str, columns):
+                """
+                Parses condition strings like 'BBH Events==1' or 'some name>=value'
+                and returns (column index, condition lambda).
+                """
+                # Supported operators, ordered by length to match longest first
+                operators = ['==', '!=', '>=', '<=', '>', '<']
+
+                # Try each operator and see if it's in the string
+                for op in operators:
+                    if op in condition_str:
+                        parts = condition_str.split(op)
+                        if len(parts) != 2:
+                            raise ValueError(f"Invalid condition format: {condition_str}")
+                        column_name = parts[0].strip()
+                        value_str = parts[1].strip()
+                        break
+                else:
+                    raise ValueError(f"No valid operator found in: {condition_str}")
+
+                if column_name not in columns:
+                    raise ValueError(f"Column '{column_name}' not found in target!")
+
+                column_idx = columns.index(column_name)
+                
+                # Try to convert value to number
+                try:
+                    value = float(value_str) if '.' in value_str else int(value_str)
+                except ValueError:
+                    value = f'"{value_str}"'  # Quote string for eval
+
+                # Return column index and lambda condition
+                return column_idx, lambda x: eval(f"x {op} {value}", {"x": x})
             # Convert conditions to apply on NumPy target array
             conditions = np.ones(target.shape[0], dtype=bool)  # Start with all True
 
             for cond_str in condition_strings:
-                col_idx, cond_func = parse_condition(cond_str, names_target_tmp)  # Get index and condition
+                col_idx, cond_func = parse_condition(cond_str, all_target_names)  # Get index and condition
 
                 if np.ndim(target) > 1:
                     conditions &= cond_func(target[:, col_idx])  # Apply condition to the correct dimension
@@ -263,13 +299,17 @@ class DataGeneration(object):
             
             # Find matching indices
             signal_indices = np.where(conditions)[0]
+            
             # All indices in the dataset
             all_indices = np.arange(target.shape[0])
 
             # Background indices are those NOT in signal_indices
             background_indices = np.setdiff1d(all_indices, signal_indices)
-
+        
             if len(background_indices) == 0 or len(signal_indices) == 0:
+                #print(f"Dataset must contain both signal (1) and background (0) samples. {filename}")
+                #shutil.move(filename, './binary-black-hole/in/data/lf/v1.1/run/run/run/zero_signal')
+                #return
                 raise ValueError("Dataset must contain both signal (1) and background (0) samples.")
 
             # Randomly pair each background sample with a signal sample

@@ -1,5 +1,5 @@
 cnp_settings:
-  training_epochs: 5
+  training_epochs: 1
   context_ratio: 0.333
   context_is_subset: True
   batch_size: 500
@@ -7,7 +7,7 @@ cnp_settings:
   number_of_walkers: 1
   config_wise: False
   version: v1.0
-  use_data_augmentation: False #"smote" #False #"mixup"
+  use_data_augmentation: "mixup" #"smote" #False #"mixup"
   use_beta: [0.1,0.1] # uniform => None, beta => [a,b] U-shape [0.1,0.1] Uniform [1.,1.] falling [0.2,0.5] rising [0.2,0.5]
   signal_to_background_ratio: "" # "_1to4" # used for smote augmentation
   ratio_testing_vs_training: 1/40
@@ -15,13 +15,13 @@ cnp_settings:
 
 simulation_settings:
   theta_headers: ["metallicity","envelope_eff_alpha","sigma_bh","sigma_ns"]
-  phi_labels: ["CH_on_MS(1)","CH_on_MS(2)","Eccentricity@ZAMS","Equilibrated_At_Birth","Evolution_Status","Mass@ZAMS(1)","Mass@ZAMS(2)","Merger","Merger_At_Birth","Metallicity@ZAMS(1)","Metallicity@ZAMS(2)","Omega@ZAMS(1)","Omega@ZAMS(2)","PO_CE_Alpha","PO_LBV_Factor","PO_Sigma_Kick_CCSN_BH","PO_Sigma_Kick_CCSN_NS","PO_Sigma_Kick_ECSN","PO_Sigma_Kick_USSN","PO_WR_Factor","Record_Type","SN_Kick_Magnitude_Random_N","SemiMajorAxis@ZAMS","Stellar_Type(1)","Stellar_Type(2)","Stellar_Type@ZAMS(1)","Stellar_Type@ZAMS(2)","Unbound"]
-  phi_all: ["CH_on_MS(1)","CH_on_MS(2)","Eccentricity@ZAMS","Equilibrated_At_Birth","Error","Evolution_Status","Mass@ZAMS(1)","Mass@ZAMS(2)","Merger","Merger_At_Birth","Metallicity@ZAMS(1)","Metallicity@ZAMS(2)","Omega@ZAMS(1)","Omega@ZAMS(2)","PO_CE_Alpha","PO_LBV_Factor","PO_Sigma_Kick_CCSN_BH","PO_Sigma_Kick_CCSN_NS","PO_Sigma_Kick_ECSN","PO_Sigma_Kick_USSN","PO_WR_Factor","Record_Type","SEED","SN_Kick_Magnitude_Random_N","SemiMajorAxis@ZAMS","Stellar_Type(1)","Stellar_Type(2)","Stellar_Type@ZAMS(1)","Stellar_Type@ZAMS(2)","Unbound"]
-  target_label: ["formed_bh"]
+  phi_labels: ["CH_on_MS(1)","CH_on_MS(2)","Eccentricity@ZAMS","Equilibrated_At_Birth","Evolution_Status","Mass@ZAMS(1)","Mass@ZAMS(2)","Merger","Merger_At_Birth","Metallicity@ZAMS(1)","Metallicity@ZAMS(2)","Omega@ZAMS(1)","Omega@ZAMS(2)","PO_CE_Alpha","PO_LBV_Factor","PO_Sigma_Kick_CCSN_BH","PO_Sigma_Kick_CCSN_NS","PO_Sigma_Kick_ECSN","PO_Sigma_Kick_USSN","PO_WR_Factor","SN_Kick_Magnitude_Random_N","SemiMajorAxis@ZAMS","Stellar_Type(1)","Stellar_Type(2)","Stellar_Type@ZAMS(1)","Stellar_Type@ZAMS(2)"]
+  #phi_all: ["CH_on_MS(1)","CH_on_MS(2)","Eccentricity@ZAMS","Equilibrated_At_Birth","Error","Evolution_Status","Mass@ZAMS(1)","Mass@ZAMS(2)","Merger","Merger_At_Birth","Metallicity@ZAMS(1)","Metallicity@ZAMS(2)","Omega@ZAMS(1)","Omega@ZAMS(2)","PO_CE_Alpha","PO_LBV_Factor","PO_Sigma_Kick_CCSN_BH","PO_Sigma_Kick_CCSN_NS","PO_Sigma_Kick_ECSN","PO_Sigma_Kick_USSN","PO_WR_Factor","Record_Type","SEED","SN_Kick_Magnitude_Random_N","SemiMajorAxis@ZAMS","Stellar_Type(1)","Stellar_Type(2)","Stellar_Type@ZAMS(1)","Stellar_Type@ZAMS(2)","Unbound"]
+  target_headers: ["BBH Events"]
   target_range: [0,1]
-  signal_condition: ["formed_bh==1"]
-  y_raw_cnp: "formed_bh[cts]"
-  y_raw_data_gen: "formed_bh[cts]"
+  signal_condition: ["BBH Events==1"]
+  y_raw_cnp: "BBH Events[cts]"
+  y_raw_data_gen: "BBH Events[cts]"
   version_lf: v1.0
   version_hf: v1.0
   file_prefix: COMPAS_1000
@@ -29,8 +29,8 @@ simulation_settings:
   nsamples_hf: 10000000
 
 path_settings:
-  path_to_training_files: ./binary-black-hole/in/data/lf/v1.0/
-  path_to_test_files_lf: ./binary-black-hole/in/data/lf/v1.0/
+  path_to_training_files: ./binary-black-hole/in/data/lf/v1.1/run/run/run
+  path_to_test_files_lf: ./binary-black-hole/in/data/lf/v1.1/run/run/run
   path_to_test_files_hf: ./binary-black-hole/in/data/hf/v1.0/
   path_out:  ./binary-black-hole/out/cnp
   f_out: CNPGauss_v1.6_3540_c1000_t2000_beta_0.1_0.1
