@@ -162,6 +162,7 @@ class DataGeneration(object):
         config_file,
         path_to_files,
         batch_size,
+        files_per_batch,
         use_data_augmentation = False,
     ):
         self._context_ratio = config_file["cnp_settings"]["context_ratio"]
@@ -169,6 +170,7 @@ class DataGeneration(object):
         self.path_to_files = path_to_files
         self.dataloader="None"
         self.config_file=config_file
+        self.files_per_batch = files_per_batch
 
         _phi_key="phi"
         _theta_key="theta"
@@ -181,7 +183,7 @@ class DataGeneration(object):
         if not any(f.endswith(".h5") for f in os.listdir(path_to_files)):
             utils.convert_all_csv_to_hdf5(config_file)
         
-        if mode != "config":
+        if mode != "testing":
             if use_data_augmentation == "mixup":
                 signal_condition = config_file["simulation_settings"]["signal_condition"]
                 files = sorted([os.path.join(path_to_files, f) for f in os.listdir(path_to_files) if f.endswith(".h5")])
@@ -196,7 +198,7 @@ class DataGeneration(object):
                         'target': {'key': _target_key,'label_key': "target_headers",'selected_labels': self._names_target}}
 
     def set_loader(self):
-        dataset = HDF5Dataset(self.path_to_files, self._batch_size, files_per_batch=self.config_file["cnp_settings"]["files_per_batch"], parameters=self.parameters)
+        dataset = HDF5Dataset(self.path_to_files, self._batch_size, files_per_batch=self.files_per_batch, parameters=self.parameters)
         self.dataloader = DataLoader(dataset, batch_size=None, num_workers=self.config_file["cnp_settings"]["number_of_walkers"], prefetch_factor=2) 
 
     def mixup_augment_data(self,filename, use_beta,condition_strings, seed=42):
@@ -382,7 +384,6 @@ class DataGeneration(object):
             batch_context_x = batch_target_x[:num_context]  # Context is a subset of target
             batch_context_y = batch_target_y[:num_context]  # Context outputs
         else:
-            # **Context and target are independent splits**
             batch_context_x = batch_x[:num_context]  # Context inputs
             batch_context_y = batch_y[:num_context]  # Context outputs
             batch_target_x = batch_x[num_context:num_context + num_target]  # Target inputs

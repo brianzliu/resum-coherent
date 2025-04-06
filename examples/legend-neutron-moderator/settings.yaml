@@ -2,8 +2,10 @@ cnp_settings:
   training_epochs: 1
   context_ratio: 0.3333333
   context_is_subset: True
-  batch_size: 3000
-  files_per_batch: 50
+  batch_size_train: 3000
+  files_per_batch_train: 50
+  batch_size_test: [50000,10000000]
+  files_per_batch_test: 1
   number_of_walkers: 1
   config_wise: False
   version: v1.6
@@ -11,7 +13,7 @@ cnp_settings:
   use_beta: [0.1,0.1] # uniform => None, beta => [a,b] U-shape [0.1,0.1] Uniform [1.,1.] falling [0.2,0.5] rising [0.2,0.5]
   signal_to_background_ratio: "" # "_1to4" # used for smote augmentation
   ratio_testing_vs_training: 1/40
-  plot_after: 500
+  plot_after: 100
 
 simulation_settings:
   theta_headers: ["radius","thickness","npanels","theta","length"]
@@ -30,8 +32,8 @@ simulation_settings:
 
 path_settings:
   path_to_training_files: ./legend-neutron-moderator/in/data/lf/
-  path_to_test_files_lf: ./legend-neutron-moderator/in/data/lf/
-  path_to_test_files_hf: ./legend-neutron-moderator/in/data/hf/
+  path_to_test_files: ["./legend-neutron-moderator/in/data/lf/","./legend-neutron-moderator/in/data/hf/"]
+  path_to_test_files_hf: 
   path_out:  ./legend-neutron-moderator/out/cnp
-  f_out: CNPGauss_v1.6_3540_c1000_t2000_beta_0.1_0.1
+  f_out: cnp
   path_to_model: ./legend-neutron-moderator/out/cnp
