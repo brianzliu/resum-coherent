@@ -27,7 +27,8 @@ dependencies = [
     "GPy",
     "emukit",
     "backports.tarfile",
-    "pymc"
+    "pymc",
+    "snap"
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
