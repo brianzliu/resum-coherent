@@ -4,8 +4,9 @@ cnp_settings:
   context_is_subset: True
   batch_size_train: 500
   files_per_batch_train: 20
-  batch_size_test: [1000,1000000]
-  files_per_batch_test: 1
+  batch_size_predict: [1000,1000000]
+  iteration_predict: [0,0]
+  files_per_batch_predict: 1
   number_of_walkers: 1
   config_wise: False
   use_data_augmentation: "mixup" #"smote" #False #"mixup"
@@ -21,15 +22,19 @@ simulation_settings:
   target_headers: ["BBH Events"]
   target_range: [0,1]
   signal_condition: ["BBH Events==1"]
-  y_raw_cnp: "BBH Events[cts]"
-  y_raw_data_gen: "BBH Events[cts]"
-  file_prefix: COMPAS_1000
-  nsamples_lf: 1000
-  nsamples_hf: 10000000
+  # Set parameter boundaries
+  theta_min: [0,0,0,0]
+  theta_max: [0.031,100,1000,1000]
+  theta_fixed: [0.02, 50, 450, 650]
+  lf_cost: 1
+  hf_cost: 1000
+  
 
 path_settings:
-  path_to_training_files: ./binary-black-hole/in/data/lf/v1.1
-  path_to_test_files: ["./binary-black-hole/in/data/lf/v1.1","./binary-black-hole/in/data/hf/v1.1"]
-  path_out:  ./binary-black-hole/out/cnp
-  f_out: cnp_v1.0
-  path_to_model: ./binary-black-hole/out/cnp
+  version: v1.0
+  path_to_files_train: ./binary-black-hole/in/data/lf/v1.1/iteration_0
+  path_to_files_predict: ["./binary-black-hole/in/data/lf/v1.1/iteration_0","./binary-black-hole/in/data/hf/v1.1/iteration_0"]
+  path_to_files_validation: ./binary-black-hole/in/data/hf/v1.1/validation
+  path_out_cnp:  ./binary-black-hole/out/cnp
+  path_out_mfgp:  ./binary-black-hole/out/mfgp
+  path_out_pce:  ./binary-black-hole/out/cnp
