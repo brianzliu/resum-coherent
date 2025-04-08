@@ -34,3 +34,5 @@ pip install -e .
 ```
 
 Then run the Jupyter notebooks in the [examples folder](https://github.com/annkasch/resum/tree/main/examples)!
+
+add plotly as a dependency
