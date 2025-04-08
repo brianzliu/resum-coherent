@@ -10,7 +10,7 @@ authors = [
     { name = "Ann-Kathrin Schuetz", email = "annkaschue@gmail.com" }
 ]
 license = { text = "MIT" }
-requires-python = ">=3.7"
+requires-python = ">=3.10"
 dependencies = [
     "numpy",
     "torch",

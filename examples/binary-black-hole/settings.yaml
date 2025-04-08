@@ -23,7 +23,7 @@ simulation_settings:
   target_range: [0,1]
   signal_condition: ["BBH Events==1"]
   # Set parameter boundaries
-  theta_min: [0,0,0,0]
+  theta_min: [0.0001,0,0,0]
   theta_max: [0.031,100,1000,1000]
   theta_fixed: [0.02, 50, 450, 650]
   lf_cost: 1
