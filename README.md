@@ -8,4 +8,4 @@ Adapted by Brian Liu and Annie Liu for COHERENT.
 The Rare Event Surrogate Model (RESuM) is designed to optimize detector designs and simulation-driven systems where the objective function involves rare event probabilities.  
 
 ## Instructions
-- To run test LF data, please copy contents of https://zenodo.org/records/14867813 into examples/resum_test/in/data/lf.
+- To run test LF data, please copy contents of https://zenodo.org/records/14867813 into examples/resum_test/in/data/lf
