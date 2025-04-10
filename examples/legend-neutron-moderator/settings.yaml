@@ -31,9 +31,9 @@ simulation_settings:
   nsamples_hf: 10000000
 
 path_settings:
-  path_to_training_files: ./legend-neutron-moderator/in/data/lf/
-  path_to_test_files: ["./legend-neutron-moderator/in/data/lf/","./legend-neutron-moderator/in/data/hf/"]
+  path_to_training_files: ../legend-neutron-moderator/in/data/lf/
+  path_to_test_files: ["../legend-neutron-moderator/in/data/lf/","../legend-neutron-moderator/in/data/hf/"]
   path_to_test_files_hf: 
-  path_out:  ./legend-neutron-moderator/out/cnp
+  path_out:  ../legend-neutron-moderator/out/cnp
   f_out: cnp
-  path_to_model: ./legend-neutron-moderator/out/cnp
+  path_to_model: ../legend-neutron-moderator/out/cnp

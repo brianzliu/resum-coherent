@@ -32,8 +32,8 @@ simulation_settings:
   nsamples_hf: 10000000
 
 path_settings:
-  path_to_training_files: ./L1000NC/in/data/hf/splitted_files
-  path_to_test_files: ["./L1000NC/in/data/hf/splitted_files"]
-  path_out:  ./L1000NC/out/cnp
+  path_to_training_files: ../L1000NC/in/data/hf/splitted_files
+  path_to_test_files: ["../L1000NC/in/data/hf/splitted_files"]
+  path_out:  ../L1000NC/out/cnp
   f_out: cnp
-  path_to_model: ./L1000NC/out/cnp
+  path_to_model: ../L1000NC/out/cnp
