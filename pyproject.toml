@@ -12,8 +12,8 @@ authors = [
 license = { text = "MIT" }
 requires-python = ">=3.10"
 dependencies = [
-    "numpy",
-    "torch",
+    "numpy==1.26.4",
+    "torch==2.2.2",
     "tensorboard",
     "matplotlib",
     "pyyaml",
@@ -24,10 +24,10 @@ dependencies = [
     "imbalanced-learn==0.8.1",
     "termcolor",
     "scipy",
-    "GPy",
-    "emukit",
+    "GPy==1.13.2",
+    "emukit==0.4.11",
     "backports.tarfile",
-    "pymc",
+    "pymc==5.22.0",
     "snap"
 ]
 classifiers = [

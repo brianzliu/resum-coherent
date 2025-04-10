@@ -31,10 +31,10 @@ simulation_settings:
   
 
 path_settings:
-  version: v1.0
+  version: v1.1
   path_to_files_train: ./binary-black-hole/in/data/lf/v1.1/iteration_0
   path_to_files_predict: ["./binary-black-hole/in/data/lf/v1.1/iteration_0","./binary-black-hole/in/data/hf/v1.1/iteration_0"]
   path_to_files_validation: ./binary-black-hole/in/data/hf/v1.1/validation
   path_out_cnp:  ./binary-black-hole/out/cnp
   path_out_mfgp:  ./binary-black-hole/out/mfgp
-  path_out_pce:  ./binary-black-hole/out/cnp
+  path_out_pce:  ./binary-black-hole/out/pce

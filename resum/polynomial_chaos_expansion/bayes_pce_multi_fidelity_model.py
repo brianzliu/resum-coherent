@@ -1,7 +1,14 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import arviz as az
+import os
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["PYTENSOR_FLAGS"] = "compiledir=./pytensor_cache,mode=FAST_COMPILE,optimizer=None"
+print("Compiledir:", os.environ.get("PYTENSOR_FLAGS"))
 import pymc as pm
+import logging
+logging.getLogger("pymc").setLevel(logging.ERROR)
+#logging.getLogger("pytensor").setLevel(logging.ERROR)
 from itertools import combinations_with_replacement
 from numpy.polynomial.legendre import Legendre
 from sklearn.model_selection import KFold
@@ -15,7 +22,7 @@ random.seed(42)            # Python random seed
 
 
 class PCEMultiFidelityModel:
-    def __init__(self, trainings_data, priors, degree=None):
+    def __init__(self, trainings_data, priors, parameters, degree=None):
         """
         Initialize the multi-fidelity model.
 
@@ -32,10 +39,20 @@ class PCEMultiFidelityModel:
         
         self.trainings_data = trainings_data
         self.fidelities = list(self.trainings_data.keys())
+        self.feature_labels = list(map(str, parameters.keys()))
+        
+        self.x_min = np.array([parameters[k][0] for k in self.feature_labels])
+        self.x_max = np.array([parameters[k][1] for k in self.feature_labels])
+        if np.any(self.x_min < -1.) or np.any(self.x_max > 1.):
+                print("Data outside [-1,1] detected. Rescaling features...")
+                for f in self.fidelities:
+                    x_data = self.trainings_data[f][0]
+                    self.trainings_data[f][0] = self.normalize_to_minus1_plus1(x_data)
+
         self.priors = priors
         self.degree = degree
         if self.degree==None:
-            self.find_optimal_order()
+            self.degree = self.find_optimal_order()
         self.model = None
         self.trace = None
 
@@ -48,6 +65,9 @@ class PCEMultiFidelityModel:
         for i,f in enumerate(self.fidelities[1:]):
             self.indices[f] = self.find_indices(trainings_data[f][0],trainings_data[self.fidelities[i]][0])
 
+    def normalize_to_minus1_plus1(self,x):
+        return 2 * (x - self.x_min) / (self.x_max - self.x_min) - 1
+    
 
     def _generate_basis(self, x_data):
         """
@@ -62,7 +82,6 @@ class PCEMultiFidelityModel:
             
         n_samples, n_dim = x_data.shape
         terms = []
-
         # Generate all combinations of terms up to the given degree
         for deg in range(self.degree + 1):
             for combo in combinations_with_replacement(range(n_dim), deg):
@@ -73,7 +92,6 @@ class PCEMultiFidelityModel:
         for i, term in enumerate(terms):
             poly = np.prod([Legendre.basis(1)(x_data[:, dim]) for dim in term], axis=0)
             basis_matrix[:, i] = poly
-
         return basis_matrix
     
     @staticmethod
@@ -124,7 +142,7 @@ class PCEMultiFidelityModel:
             basis.append(x[:, i] * x[:, j])
 
         return np.vstack(basis).T
-    
+
     def _add_fidelity(self, model, fidelity, y_prev_pred_full):
         """
         Recursively add fidelity levels to the model.
@@ -142,19 +160,36 @@ class PCEMultiFidelityModel:
         basis_matrix = self.basis_matrices[fidelity]
         observed = self.trainings_data[fidelity][1]
 
-        y_prev_pred_subset = pm.Deterministic(f"y_prev_pred_subset_{fidelity}", y_prev_pred_full[self.indices[fidelity]])
+        #y_prev_pred_subset = pm.Deterministic(f"y_prev_pred_subset_{fidelity}", y_prev_pred_full[self.indices[fidelity]])
+        # fix 
+        subset_indices = self.indices[fidelity]
+        y_prev_pred_subset = pm.Deterministic(
+            f"y_prev_pred_subset_{fidelity}",
+            pm.math.stack([y_prev_pred_full[i] for i in subset_indices])
+        )
         # Scaling factor
         rho = pm.Normal(f"rho_{fidelity}", mu=1, sigma=self.priors[fidelity]["sigma_rho"])
         # Priors for high-fidelity discrepancy coefficients
         coeffs_delta = pm.Normal(f"coeffs_delta_{fidelity}", mu=0, sigma=self.priors[fidelity]["sigma_coeffs_delta"], shape=self.basis_matrices[fidelity].shape[1])
         # High-fidelity discrepancy
-        delta_pred = pm.Deterministic(f"delta_{fidelity}", pm.math.dot(self.basis_matrices[fidelity], coeffs_delta))
+        #delta_pred = pm.Deterministic(f"delta_{fidelity}", pm.math.dot(self.basis_matrices[fidelity], coeffs_delta))
+        # fix
+        basis = pm.Data(f"basis_{fidelity}_delta", self.basis_matrices[fidelity])
+        delta_pred = pm.Deterministic(f"delta_{fidelity}", pm.math.dot(basis, coeffs_delta))
+
             
         # High-fidelity predictions
         y_pred = pm.Deterministic(f"y_pred_{fidelity}", rho * y_prev_pred_subset + delta_pred)
         # Likelihood for high-fidelity data
         sigma = pm.HalfNormal(f"sigma_{fidelity}", sigma=self.priors[fidelity]["sigma"])
-        y_like = pm.Normal(f"y_like_{fidelity}", mu=y_pred, sigma=sigma, observed=self.trainings_data[fidelity][1])
+        y_likeli = pm.Normal(f"y_likeli_{fidelity}", mu=y_pred, sigma=sigma, observed=self.trainings_data[fidelity][1])
+        obs = self.trainings_data[fidelity][1]
+        # Compute the pointwise log likelihood manually using pm.math functions.
+        # For a Normal distribution, the log likelihood is:
+        log_lik = -0.5 * (((obs - y_pred) / sigma) ** 2) - pm.math.log(sigma) - 0.5 * pm.math.log(2 * np.pi)
+        # Register it as a Deterministic node so it is tracked in the InferenceData.
+        pm.Deterministic(f"log_likelihood_{fidelity}", log_lik)
+
         return y_pred
 
     def build_model(self):
@@ -164,22 +199,36 @@ class PCEMultiFidelityModel:
           # ["lf", "mf", "hf"]
         with pm.Model() as model:
             # Start with low-fidelity coefficients
-
             coeffs = pm.Normal(f"coeffs_{self.fidelities[0]}",
                 mu=0,
                 sigma=self.priors[self.fidelities[0]]["sigma_coeffs"],
                 shape=self.basis_matrices[self.fidelities[0]].shape[1]
             )
-            y_prev_pred_full = pm.Deterministic(f"y_pred_full_{self.fidelities[0]}", pm.math.dot(self.basis_matrices[self.fidelities[0]], coeffs))
+
+            #y_prev_pred_full = pm.Deterministic(f"y_pred_full_{self.fidelities[0]}", pm.math.dot(self.basis_matrices[self.fidelities[0]], coeffs))
+            #fixed
+            basis = pm.Data(f"basis_{self.fidelities[0]}", self.basis_matrices[self.fidelities[0]])
+            y_prev_pred_full = pm.Deterministic(f"y_pred_full_{self.fidelities[0]}", pm.math.dot(basis, coeffs))
+           
             sigma = pm.HalfNormal(f"sigma_{self.fidelities[0]}", sigma=self.priors[self.fidelities[0]]["sigma"])
-            y_like = pm.Normal(f"y_like_{self.fidelities[0]}", mu=y_prev_pred_full, sigma=sigma, observed=self.trainings_data[self.fidelities[0]][1])
+            y_likeli = pm.Normal(f"y_likeli_{self.fidelities[0]}", mu=y_prev_pred_full, sigma=sigma, observed=self.trainings_data[self.fidelities[0]][1])
+            obs = self.trainings_data[self.fidelities[0]][1]
+            # Compute the pointwise log likelihood manually using pm.math functions.
+            # For a Normal distribution, the log likelihood is:
+            log_lik = -0.5 * (((obs - y_prev_pred_full) / sigma) ** 2) - pm.math.log(sigma) - 0.5 * pm.math.log(2 * np.pi)
+            # Register it as a Deterministic node so it is tracked in the InferenceData.
+            pm.Deterministic(f"log_likelihood_{self.fidelities[0]}", log_lik)
             
             # Add fidelities recursively
             for fidelity in self.fidelities[1:]:
                 y_prev_pred_full = self._add_fidelity(model, fidelity, y_prev_pred_full)
             self.model = model
+            
+            #pm.model_to_graphviz(model)
+
+            self.model = model
     
-    def run_inference(self, method="advi", n_samples=2000, n_steps=1000000):
+    def run_inference(self, method="nuts", n_samples=200, n_steps=1000, tune=100, chains=4, cores=1):
         """
         Run inference on the PCE model.
 
@@ -193,13 +242,19 @@ class PCEMultiFidelityModel:
             raise RuntimeError("Model has not been built. Call build_model() first.")
 
         with self.model:
+            #init_point = self.model.initial_point()
+            #print(init_point)
             if method == "advi":
                 # Variational Inference
+                #approx = pm.fit(n=n_steps, method=pm.MeanField(), progressbar=True)
+                #approx = pm.fit(n=n_steps, method=pm.MeanField(), obj_optimizer=pm.adam(learning_rate=1e-2), progressbar=True)
                 approx = pm.fit(n=n_steps, method="advi", progressbar=True)
+                #approx = pm.fit(n=n_steps, method="advi", progressbar=True, callbacks=[pm.callbacks.CheckParametersConvergence(tolerance=1e-2)])
+                #plt.plot(approx.hist)
                 self.trace = approx.sample(n_samples)
             elif method == "nuts":
                 # HMC Sampling
-                self.trace = pm.sample(self.n_samples, tune=1000, target_accept=0.95, cores=4)
+                self.trace = pm.sample(n_samples, tune=tune, chains=chains,init="adapt_diag", target_accept=0.99, cores=cores, progressbar=True)
             else:
                 raise ValueError(f"Unknown inference method: {method}")
 
@@ -207,140 +262,42 @@ class PCEMultiFidelityModel:
     
     def plot_trace(self):
         az.plot_trace(self.trace)
-        plt.show()
-    
-    def evaluate_mse(self, x_test, y_test):
-        '''
-        - test_data: Dictionary of training data for fidelity level to test.
-          Example: [x_hf,y_hf]
-        '''
-        if self.trace is None:
-            raise RuntimeError("Model has not been trained. Call run_inference() first.")
-
-        # Generate the basis matrix for the test data
-
-        basis_matrix_test = self._generate_basis(x_test)
-        # Posterior mean predictions
-        coeffs_mean = self.trace.posterior[f"coeffs_{self.fidelities[0]}"].mean(dim=["chain", "draw"]).values
-        y_pred = np.dot(basis_matrix_test, coeffs_mean)
-        
-        for fidelity in self.fidelities[1:]:
-            coeffs_delta_mean = self.trace.posterior[f"coeffs_delta_{fidelity}"].mean(dim=["chain", "draw"]).values
-            rho_mean = self.trace.posterior[f"rho_{fidelity}"].mean(dim=["chain", "draw"]).values
-            # Predict y_test
-            y_pred = rho_mean * y_pred + np.dot(basis_matrix_test, coeffs_delta_mean)
-
-        mse = np.mean((y_pred - y_test) ** 2)
-        return mse
-
-    def plot_validation(self, x_data, y_true):
-        """
-        Plot the validation data with the uncertainty prediction bands.
-
-        Parameters:
-        - x_data (ndarray): Input data (e.g., validation or test set).
-        - y_true (ndarray): True high-fidelity target values for validation.
-        - trace: Trace object containing posterior samples from PyMC.
-        """
-        y_hf_pred_samples = self.generate_y_hf_pred_samples(x_data)
-        hf_sample_numbers = np.arange(len(y_true))
-
-        plt.figure(figsize=(10, 6))
-        plt.fill_between(
-            hf_sample_numbers,
-            np.percentile(y_hf_pred_samples, 0.5, axis=0),
-            np.percentile(y_hf_pred_samples, 99.5, axis=0),
-            color="coral", alpha=0.2, label=r'$\pm 3\sigma$'
-        )
-        plt.fill_between(
-            hf_sample_numbers,
-            np.percentile(y_hf_pred_samples, 2.5, axis=0),
-            np.percentile(y_hf_pred_samples, 97.5, axis=0),
-            color="yellow", alpha=0.2, label=r'$\pm 2\sigma$'
-        )
-        plt.fill_between(
-            hf_sample_numbers,
-            np.percentile(y_hf_pred_samples, 16, axis=0),
-            np.percentile(y_hf_pred_samples, 84, axis=0),
-            color="green", alpha=0.2, label=r'$\pm 1\sigma$'
-        )
-        plt.scatter(hf_sample_numbers, y_true, marker='.', color="black", label="HF Validation Data")
-
-        plt.xlabel("HF Simulation Trial Number")
-        plt.ylabel(r"$y_{hf}$")
-        handles, labels = plt.gca().get_legend_handles_labels()
-        order = [3, 2, 1, 0]
-        plt.legend([handles[idx] for idx in order], [labels[idx] for idx in order], loc='upper center', bbox_to_anchor=(0.5, 1.15), ncol=4)
-        plt.title("Validation Data with Prediction Uncertainty Bands")
-        plt.grid(True, alpha=0.3)
         plt.tight_layout()
         plt.show()
     
-    def validate_coverage(self, x_data, y_true):
-        """
-        Validate the coverage of the model for 1, 2, and 3 sigma intervals.
+    def plot_energy(self):
+        az.plot_energy(self.trace)
 
-        Parameters:
-        - y_true (ndarray): True high-fidelity target values for validation.
-        - y_hf_pred_samples (ndarray): Posterior predictive samples for high-fidelity predictions.
-
-        Returns:
-        - dict: Percentages of validation data within 1, 2, and 3 sigma intervals.
-        """
-        y_hf_pred_samples = self.generate_y_hf_pred_samples(x_data)
-        counters = {1: 0, 2: 0, 3: 0}
-
-        # Calculate percentile intervals for the posterior samples
-        percentiles = {
-            1: (np.percentile(y_hf_pred_samples, 16, axis=0), np.percentile(y_hf_pred_samples, 84, axis=0)),
-            2: (np.percentile(y_hf_pred_samples, 2.5, axis=0), np.percentile(y_hf_pred_samples, 97.5, axis=0)),
-            3: (np.percentile(y_hf_pred_samples, 0.5, axis=0), np.percentile(y_hf_pred_samples, 99.5, axis=0)),
-        }
-
-        # Count the number of y_true points within each interval
-        for i, y in enumerate(y_true):
-            for sigma in [1, 2, 3]:
-                low, high = percentiles[sigma]
-                if low[i] <= y <= high[i]:
-                    counters[sigma] += 1
-
-        # Calculate percentages
-        coverage = {sigma: (counters[sigma] / len(y_true)) * 100 for sigma in [1, 2, 3]}
-        return coverage
+    def plot_forrest(self):
+        param_names = [rv.name for rv in self.model.free_RVs]
+        az.plot_forest(self.trace, var_names=param_names)
     
+    def save_trace(self, output, version="v1.0"):
+        az.to_netcdf(self.trace, f"{output}/pce_{version}_trace.nc")
 
-    def generate_y_hf_pred_samples(self, x_data):
-        """
-        Generate high-fidelity prediction samples based on posterior trace.
+    def sanity_check_of_basis(self):
+        for f in self.fidelities:
+            print("X range:", np.min(self.trainings_data[f][0], axis=0), np.max(self.trainings_data[f][0], axis=0))
+            print("y_lf std:", np.std(self.trainings_data[f][1]))
+            print("Basis stds:", np.std(self.basis_matrices[f], axis=0))
+            plt.figure()
+            plt.imshow(self.basis_matrices[f], aspect='auto', cmap='magma')
+            plt.colorbar()
+            plt.title(f"{f} Basis Matrix")
+            plt.show()  
 
-        Parameters:
-        - x_data (ndarray): Input data (e.g., validation or test set).
-        - trace: Trace object containing posterior samples from PyMC.
+    def check_logp_per_variable(self):
+        with self.model:
+            init_point = self.model.initial_point()
+            for rv in self.model.free_RVs:
+                logp_fn = self.model.compile_logp(vars=[rv])
+                try:
+                    logp_val = logp_fn({rv.name: init_point[rv.name]})
+                    print(f"{rv.name:25} logp: {logp_val}")
+                except Exception as e:
+                    print(f"{rv.name:25} logp: ERROR → {e}")
 
-        Returns:
-        - y_hf_pred_samples (ndarray): Predicted high-fidelity samples (shape: n_samples_total x n_hf_samples).
-        """
-        basis_matrix_test = self._generate_basis(x_data)  # Shape: (n_samples, n_terms_hf)
-
-        coeff_samples = self.trace.posterior[f"coeffs_{self.fidelities[0]}"].values  # Shape: (n_chains, n_draws, n_terms_hf)
-        coeff_samples_flat = coeff_samples.reshape(-1, coeff_samples.shape[-1])  # Shape: (n_samples_total, n_terms_hf)
-        y_pred_samples = np.dot(coeff_samples_flat, basis_matrix_test.T)  # Shape: (n_samples_total, n_lf_samples)
-
-        for fidelity in self.fidelities[1:]:
-
-            # Extract coefficients from the posterior
-            coeff_samples_delta = self.trace.posterior[f"coeffs_delta_{fidelity}"].values  # Shape: (n_chains, n_draws, n_terms_hf)
-            coeff_samples_delta_flat = coeff_samples_delta.reshape(-1, coeff_samples_delta.shape[-1])  # Shape: (n_samples_total, n_terms_hf)
-            delta_pred_samples = np.dot(coeff_samples_delta_flat, basis_matrix_test.T)  # Shape: (n_samples_total, n_hf_samples)
-            rho_samples = self.trace.posterior[f"rho_{fidelity}"].values  # Shape: (n_chains, n_draws)
-            rho_samples_flat = rho_samples.flatten()  # Shape: (n_samples_total,)
-            
-            # Compute HF predictions
-            y_pred_samples = rho_samples_flat[:, None] * y_pred_samples + delta_pred_samples  # Shape: (n_samples_total, n_hf_samples)
-
-        return y_pred_samples
-    
-    def find_optimal_order(self, max_order=5, n_splits=5):
+    def find_optimal_order(self):
         """
         Find the optimal polynomial order using cross-validation.
 
@@ -352,6 +309,13 @@ class PCEMultiFidelityModel:
         - optimal_order (int): Optimal polynomial order.
         """
         print("Finding the optimal polynomial order using cross-validation...")
+        n_splits,max_order = self.trainings_data[self.fidelities[0]][0].shape
+
+        for f in self.fidelities[1:]:
+            n_splits_tmp,_ = self.trainings_data[f][0].shape
+            if n_splits_tmp < n_splits:
+                n_splits = n_splits_tmp
+
         errors = []
         kf = KFold(n_splits=n_splits)
 
@@ -393,3 +357,10 @@ class PCEMultiFidelityModel:
         optimal_order = np.argmin(errors) + 1
         print(f"The optimal order is {optimal_order}")
         return optimal_order
+
+    def add_log_likelihood_manually(self):
+        if "log_likelihood" not in self.trace.groups():
+            ll = self.trace.posterior["log_likelihood_lf"]
+        print(self.trace)
+        ll = self.trace.posterior["log_likelihood_lf"]
+        print(self.trace)
