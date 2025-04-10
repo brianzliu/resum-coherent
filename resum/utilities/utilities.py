@@ -75,6 +75,8 @@ def convert_single_csv_to_hdf5(csv_file, hdf5_file, theta_headers, target_label,
         """
         # Read CSV file
         df = pd.read_csv(csv_file)
+        # added strip
+        df.columns = df.columns.str.strip()
         # **Extract 'theta' data**
         theta_data = df[theta_headers].to_numpy()[0]
         #weights_data = df[weights_labels].to_numpy()
@@ -103,6 +105,7 @@ def convert_single_csv_to_hdf5(csv_file, hdf5_file, theta_headers, target_label,
             hdf.create_dataset("target_labels", data=np.array(target_label, dtype='S'), compression="gzip")
             hdf.create_dataset("weights", data=weights_data, compression="gzip")
             hdf.create_dataset("weights_labels", data=np.array(weights_labels, dtype='S'), compression="gzip")
+
 
 def convert_all_csv_to_hdf5(config_file):
         """
@@ -200,7 +203,7 @@ def parse_slice_string(command):
 
 def get_feature_and_label_size(config_file):
     x_size = len(config_file["simulation_settings"]["theta_headers"]+config_file["simulation_settings"]["phi_labels"])
-    name_y =config_file["simulation_settings"]["target_headers"]
+    name_y = config_file["simulation_settings"]["target_headers"]
 
     if isinstance(name_y,str):
         if name_y:
@@ -213,7 +216,7 @@ def get_feature_and_label_size(config_file):
     else:
         y_size = len(name_y)
     
-    return [x_size, y_size]
+    return (x_size, y_size)
 
 def split_file_into_chunks(input_file, output_dir, chunk_size=50000):
 
