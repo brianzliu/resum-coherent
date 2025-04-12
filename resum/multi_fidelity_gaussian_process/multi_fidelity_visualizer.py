@@ -153,10 +153,10 @@ class MultiFidelityVisualizer():
                         
                         x_plot = (np.atleast_2d(x_train[i]))
                         X_plot = convert_x_list_to_array([x_plot , x_plot, x_plot])
+                        
                     
                         mean_mf_model, var_mf_model = self.mf_model.model.predict(X_plot[j*SPLIT:(j+1)*SPLIT])
                         std_mf_model = np.sqrt(var_mf_model)
-
                         y_data.append(y_train[i])
                         x.append(i)
                         mfsm_model_mean=np.append(mfsm_model_mean,mean_mf_model[0,0])
@@ -176,3 +176,64 @@ class MultiFidelityVisualizer():
                     ax[j].set_xlabel('Data Point')
             return fig
     
+    def draw_model_marginalized(self, keep_axis=0, grid_steps=10):
+            x_grid_list = []
+            for p in self.parameters:
+                arr = np.linspace(self.parameters[p][0],self.parameters[p][1], grid_steps)
+                x_grid_list.append(arr)
+
+            mesh = np.meshgrid(*x_grid_list, indexing='ij')
+            points = np.stack([m.flatten() for m in mesh], axis=1)
+            mesh_grid_list = points.tolist()
+
+            fig, ax = plt.subplots(self.mf_model.nfidelities, 1, figsize=(12, 10))
+            for j in range(self.mf_model.nfidelities):
+                mfsm_model_mean = []
+                mfsm_model_var = []
+                x_train = mesh_grid_list
+                #y_train = self.mf_model.trainings_data[f][1]
+                x_train = np.atleast_2d(x_train)
+
+                for i in range(len(x_train)):
+                        SPLIT = 1
+                        x_plot = (np.atleast_2d(x_train[i]))
+                        X_plot = convert_x_list_to_array([x_plot , x_plot, x_plot])
+                        mean_mf_model, var_mf_model = self.mf_model.model.predict(X_plot[j*SPLIT:(j+1)*SPLIT])
+                        mfsm_model_mean=np.append(mfsm_model_mean,mean_mf_model[0,0])
+                        mfsm_model_var.append(var_mf_model[0, 0])
+
+                y_mean = np.array(mfsm_model_mean)
+                y_var = np.array(mfsm_model_var)
+
+                grid_shape = [grid_steps] * len(self.parameters)
+                y_mean_grid = y_mean.reshape(grid_shape)
+                y_var_grid = y_var.reshape(grid_shape)
+    
+                all_grid_axes = list(range(len(self.parameters)))
+                marginalize_axes = tuple(ax for ax in all_grid_axes if ax != keep_axis)
+                # Compute the marginal mean by averaging over the inactive dimensions.
+                y_marginalized = np.mean(y_mean_grid, axis=marginalize_axes)
+                # Compute the marginal variance via the law of total variance:
+                #   var_marg = mean(var_grid) + variance(y_grid)
+                y_var_marginalized = np.mean(y_var_grid, axis=marginalize_axes) + np.var(y_mean_grid, axis=marginalize_axes)
+                y_std_marginalized = np.sqrt(y_var_marginalized)
+
+                ax[j].fill_between(x_grid_list[keep_axis], y1=y_marginalized-3*y_std_marginalized, y2=y_marginalized+3*y_std_marginalized, color=self.colors_std[j],alpha=0.2, label=f'{j} model mean $\pm 3\sigma$')
+                ax[j].fill_between(x_grid_list[keep_axis], y1=y_marginalized-2*y_std_marginalized, y2=y_marginalized+2*y_std_marginalized, color=self.colors_std[j],alpha=0.2, label=f'{j} model mean $\pm 2\sigma$')
+                ax[j].fill_between(x_grid_list[keep_axis], y1=y_marginalized-y_std_marginalized, y2=y_marginalized+y_std_marginalized, color=self.colors_std[j],alpha=0.2, label=f'{j} model mean $\pm 1\sigma$')
+                ax[j].plot(x_grid_list[keep_axis],y_marginalized,color=self.colors_mean[j], label=f'{j} model mean')
+                #ax[j].plot(x[:],y_data[:],'.',color="black", label="Data")
+                ymin, ymax = ax[j].get_ylim()
+                ax[j].set_ylim(ymin*0.95,ymax*1.05)
+                #handles, labels = ax[j].get_legend_handles_labels()
+                
+                #order = [2,1,0]
+                #ax[j].legend([handles[idx] for idx in order],[labels[idx] for idx in order],loc=9, bbox_to_anchor=(0.665,1.),ncol=3)
+                ax[j].set_ylabel('Data and Model Prediction')
+                if j == (self.mf_model.nfidelities-1):
+                    ax[j].set_xlabel(list(self.parameters.keys())[keep_axis])
+            
+            return fig
+    
+    
+
