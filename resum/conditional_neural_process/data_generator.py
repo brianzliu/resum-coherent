@@ -60,13 +60,18 @@ class HDF5Dataset(IterableDataset):
         max_rows = 0
         self.dataset_size = 0 
         for file in self.files:
-            with h5py.File(file, "r") as hdf:
-                    if self.parameters['target']['key'] in hdf:
-                        num_rows = hdf[self.parameters['target']['key']].shape[0]
-                        self.dataset_size += num_rows
-                        # Update max row count if this file has more rows
-                        if num_rows > max_rows:
-                            max_rows = num_rows
+            try:
+                with h5py.File(file, "r") as hdf:
+                        if self.parameters['target']['key'] in hdf:
+                            num_rows = hdf[self.parameters['target']['key']].shape[0]
+                            self.dataset_size += num_rows
+                            # Update max row count if this file has more rows
+                            if num_rows > max_rows:
+                                max_rows = num_rows
+            except (OSError, IOError) as e:
+                print(f"Skipping corrupted or unreadable file: {file}")
+                print(f"Reason: {e}")
+                continue
             if num_rows==0:
                 print(f"WARNING! {file} has row size 0. Either no data or target key doesn't match.")
         if max_rows == 0:

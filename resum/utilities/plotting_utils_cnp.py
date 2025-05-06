@@ -4,6 +4,8 @@ from collections import Counter
 import sys
 import os
 from . import plotting_utils as plotting
+import pandas as pd
+import matplotlib.lines as mlines
 
 def plot(prediction_y_training, target_y_training, loss_training, prediction_y_testing, target_y_testing,  loss_testing, target_range=[0,1], it=None):
 
@@ -177,3 +179,119 @@ def plot_result_configwise(prediction_y, target_y, loss, x):
     ax[1].legend([tmp_str],loc='lower center', bbox_to_anchor=(0.5, -0.4), ncol=2)
         
     return fig
+
+def get_marginalized(x_data, y_data, x_min, x_max, keep_axis, grid_steps=100):
+        """
+        Marginalizes predictions over all but one feature using random sampling when only one 
+        prediction is available per sample (y_hf has shape (n_samples, 1)).
+        """
+
+        x_keep = x_data[:, keep_axis]
+
+        # Define bins along the kept axis in the original scale.
+        bin_edges = np.linspace(x_min, x_max, grid_steps + 1)
+        bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.0
+
+        # For each bin, compute the median and 1σ percentiles (16th and 84th) from the samples in the bin.
+        medians = np.empty(grid_steps)
+        lower_vals = np.empty(grid_steps)
+        upper_vals = np.empty(grid_steps)
+        for i in range(grid_steps):
+            # Use a half-open interval except for the last bin.
+            if i < grid_steps - 1:
+                mask = (x_keep >= bin_edges[i]) & (x_keep < bin_edges[i+1])
+            else:
+                mask = (x_keep >= bin_edges[i]) & (x_keep <= bin_edges[i+1])
+            if np.sum(mask) > 0:
+                bin_values = y_data[mask]
+                medians[i] = np.median(bin_values)
+                lower_vals[i] = np.percentile(bin_values, 16)
+                upper_vals[i] = np.percentile(bin_values, 84)
+            else:
+                medians[i] = np.nan
+                lower_vals[i] = np.nan
+                upper_vals[i] = np.nan
+
+        # Compute errors for plotting (errorbars represent the distance from the median to the percentiles)
+        lower_error = medians - lower_vals
+        upper_error = upper_vals - medians
+        
+        return bin_centers, medians, lower_error, upper_error
+
+def get_marginialized_all(config_file, grid_steps=100):
+        x_labels = config_file["simulation_settings"]["theta_headers"]
+        x_min = config_file["simulation_settings"]["theta_min"]
+        x_max = config_file["simulation_settings"]["theta_max"]
+        path_out  = config_file["path_settings"]["path_out_cnp"]
+        version   = config_file["path_settings"]["version"]
+        data=pd.read_csv(f'{path_out}/cnp_{version}_output.csv')
+        y_label_sim = 'y_raw'
+        y_label_cnp = 'y_cnp'
+        fidelities  = np.unique(config_file["path_settings"]["fidelity"])
+        x_data = []
+        y_data = []
+        y_sim = []
+        y_data_min=1.
+        y_data_max=0.
+        y_sim_min=1.
+        y_sim_max=0.
+        for f in fidelities:
+                x_data.append(data.loc[(data['fidelity']==f)][x_labels].to_numpy())
+                y_data.append(data.loc[(data['fidelity']==f)][y_label_cnp].to_numpy())
+                y_sim.append(data.loc[(data['fidelity']==f)][y_label_sim].to_numpy())
+                y_data_min=min(y_data_min,np.min(y_data[-1]))
+                y_data_max=max(y_data_max,np.max(y_data[-1]))
+                y_sim_min=min(y_sim_min,np.min(y_sim[-1]))
+                y_sim_max=max(y_sim_max,np.max(y_sim[-1]))
+
+        colors=[["salmon","darkturquoise"],["darkred","teal"],["orangedred","darkslategrey"]]
+        markers=['.','s','o''x']
+        grid_steps = 100
+        n_params = len(x_labels)
+        n_cols = 2
+        n_rows = int(np.ceil(n_params / n_cols))
+
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(6 * n_cols, 4 * n_rows), squeeze=False)
+
+        for i, param in enumerate(x_labels):
+                for f in range(len(x_data)):
+                        row = i // n_cols
+                        col = i % n_cols
+                        ax1 = axes[row][col]
+
+                        # Get marginalized draws
+                        x_cnp, y_cnp,_,_ = get_marginalized(x_data=x_data[f], y_data=y_data[f], x_min=x_min[i], x_max=x_max[i], keep_axis=i, grid_steps=grid_steps)
+                        x_raw, y_raw,_,_ = get_marginalized(x_data=x_data[f], y_data=y_sim[f],  x_min=x_min[i], x_max=x_max[i], keep_axis=i, grid_steps=grid_steps)
+
+                        # Plot on first axis
+                        p1 = ax1.scatter(x_cnp, y_cnp, color=colors[f][0],alpha=1., marker=markers[f])
+                        if (f==0):
+                                ax1.set_ylabel('$y_{cnp}$', color=colors[f][0])
+                                ax1.tick_params(axis='y', labelcolor=colors[f][0])
+                                ax1.set_xlabel(param)
+                                ax1.set_ylim(y_data_min*0.9,y_data_max*1.005)
+                                ax2 = ax1.twinx()
+                                ax2.set_ylabel('$y_{raw}$', color=colors[f][1])
+                                ax2.set_ylim(y_sim_min*0.8,y_sim_max*1.005)
+                                ax2.tick_params(axis='y', labelcolor=colors[f][1])
+
+                        # Plot on second axis
+                        
+                        p2 = ax2.scatter(x_raw, y_raw, color=colors[f][1],alpha=1., marker=markers[f])
+
+
+        handles = []
+        for j in range(len(x_data)):
+                handles.append(mlines.Line2D([], [], color=colors[j][0], marker=markers[j], linestyle='None', label='$y_{cnp}$'+f'(f={j})'))
+                handles.append( mlines.Line2D([], [], color=colors[j][1], marker=markers[j], linestyle='None', label='$y_{raw}$'+f'(f={j})'))
+        fig.legend(
+                handles=handles,
+                loc='lower center',
+                ncol=2*len(x_data),
+                title='',
+                bbox_to_anchor=(0.5, -0.05)
+                )
+
+        # Adjust layout
+        plt.tight_layout()
+        return fig

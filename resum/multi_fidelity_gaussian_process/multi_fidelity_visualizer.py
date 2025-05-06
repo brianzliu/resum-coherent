@@ -3,6 +3,9 @@ np.random.seed(42)
 import matplotlib.pyplot as plt
 from emukit.multi_fidelity.convert_lists_to_array import convert_x_list_to_array
 from sklearn.metrics import mean_squared_error
+import matplotlib.patches as mpatches
+from matplotlib.lines import Line2D
+from resum.utilities import plotting_utils as plotting
 
 class MultiFidelityVisualizer():
     def __init__(self, mf_model, parameters, x_fixed):
@@ -87,58 +90,80 @@ class MultiFidelityVisualizer():
         return fig
 
     def model_validation(self, x_test, y_test):
-            x_test, y_test = (np.atleast_2d(x_test), np.atleast_2d(y_test).T)
+            nrows = len(x_test)
+            ncols = 1
+            fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(12 * ncols, 3 * nrows), squeeze=False)
 
-            counter_1sigma = 0
-            counter_2sigma = 0
-            counter_3sigma = 0
+            for f in range(len(x_test)):
+                ax = axes[f][0]
+                x_test_tmp, y_test_tmp = (np.atleast_2d(x_test[f]), np.atleast_2d(y_test[f]).T)
 
-            mfsm_model_mean = np.empty(shape=[0, 0])
-            mfsm_model_std = np.empty(shape=[0, 0])
-            y_data=[]
-            x=[]
-            for i in range(len(x_test)):
+                counter_1sigma = 0
+                counter_2sigma = 0
+                counter_3sigma = 0
 
-                    SPLIT = 1
-                    x_plot = []
-                    for j in range(self.mf_model.nfidelities):
-                        x_plot.append((np.atleast_2d(x_test[i])))
-                    X_plot = convert_x_list_to_array(x_plot)
+                mfsm_model_mean = np.empty(shape=[0, 0])
+                mfsm_model_std = np.empty(shape=[0, 0])
+                y_data=[]
+                x=[]
+                for i in range(len(x_test_tmp)):
 
-                    hhf_mean_mf_model, hhf_var_mf_model = self.mf_model.model.predict(X_plot[(self.mf_model.nfidelities-1)*SPLIT:(self.mf_model.nfidelities)*SPLIT])
-                    hhf_std_mf_model = np.sqrt(hhf_var_mf_model)
+                        SPLIT = 1
+                        x_plot = []
+                        for j in range(self.mf_model.nfidelities):
+                            x_plot.append((np.atleast_2d(x_test_tmp[i])))
+                        X_plot = convert_x_list_to_array(x_plot)
 
-                    y_data.append(y_test[i])
-                    x.append(i)
-                    mfsm_model_mean=np.append(mfsm_model_mean,hhf_mean_mf_model[0,0])
-                    mfsm_model_std=np.append(mfsm_model_std,hhf_std_mf_model[0,0])
-                    if (y_test[i] < hhf_mean_mf_model[0][0]+hhf_std_mf_model[0][0]) and (y_test[i] > hhf_mean_mf_model[0][0]-hhf_std_mf_model[0][0]):
-                            counter_1sigma += 1
-                    if (y_test[i] < hhf_mean_mf_model[0][0]+2*hhf_std_mf_model[0][0]) and (y_test[i] > hhf_mean_mf_model[0][0]-2*hhf_std_mf_model[0][0]):
-                            counter_2sigma += 1
-                    if (y_test[i] < hhf_mean_mf_model[0][0]+3*hhf_std_mf_model[0][0]) and (y_test[i] > hhf_mean_mf_model[0][0]-3*hhf_std_mf_model[0][0]):
-                            counter_3sigma += 1
+                        mean_mf_model, var_mf_model = self.mf_model.model.predict(X_plot[f*SPLIT:(f+1)*SPLIT])
+                        std_mf_model = np.sqrt(var_mf_model)
 
-            fig,ax = plt.subplots(figsize=(12, 2.5))
-            #plt.bar(x=np.arange(len(mfsm_model_mean)), height=mfsm_model_mean, color="lightgray", label='RESuM')
-            plt.fill_between(x=np.arange(len(mfsm_model_mean)), y1=mfsm_model_mean-3*mfsm_model_std, y2=mfsm_model_mean+3*mfsm_model_std, color="coral",alpha=0.2, label=r'$\pm 3\sigma$')
-            plt.fill_between(x=np.arange(len(mfsm_model_mean)), y1=mfsm_model_mean-2*mfsm_model_std, y2=mfsm_model_mean+2*mfsm_model_std, color="yellow",alpha=0.2, label=r'$\pm 2\sigma$')
-            plt.fill_between(x=np.arange(len(mfsm_model_mean)), y1=mfsm_model_mean-mfsm_model_std, y2=mfsm_model_mean+mfsm_model_std, color="green",alpha=0.2, label=r'RESuM $\pm 1\sigma$')
-            plt.xlabel('HF Simulation Trial Number')
-            ymin, ymax = ax.get_ylim()
-            plt.ylim(ymin,ymax*1.3)
-            plt.ylabel(r'$y_{raw}$')
-            plt.plot(x[:],y_data[:],'.',color="black", label="HF Validation Data")
-            handles, labels = plt.gca().get_legend_handles_labels()
-            order = [3,2,1,0]
-            plt.legend([handles[idx] for idx in order],[labels[idx] for idx in order],loc=9, bbox_to_anchor=(0.665,1.),ncol=5)
-            mse = mean_squared_error(y_data, mfsm_model_mean, squared=True)
-            fig.text(0.905,0.5,f"within $1\sigma$: {counter_1sigma/len(y_data)*100.:.0f}% \nwithin $2\sigma$: {counter_2sigma/len(y_data)*100.:.0f}% \nwithin $1\sigma$: {counter_3sigma/len(y_data)*100.:.0f}% \nMSE {mse:.5f}")
+                        y_data.append(y_test_tmp[i])
+                        x.append(i)
+                        mfsm_model_mean=np.append(mfsm_model_mean,mean_mf_model[0,0])
+                        mfsm_model_std=np.append(mfsm_model_std,std_mf_model[0,0])
+                        
+                        if (y_test_tmp[i] < mean_mf_model[0][0]+std_mf_model[0][0]) and (y_test_tmp[i] > mean_mf_model[0][0]-std_mf_model[0][0]):
+                                counter_1sigma += 1
+                        if (y_test_tmp[i] < mean_mf_model[0][0]+2*std_mf_model[0][0]) and (y_test_tmp[i] > mean_mf_model[0][0]-2*std_mf_model[0][0]):
+                                counter_2sigma += 1
+                        if (y_test_tmp[i] < mean_mf_model[0][0]+3*std_mf_model[0][0]) and (y_test_tmp[i] > mean_mf_model[0][0]-3*std_mf_model[0][0]):
+                                counter_3sigma += 1
+
+                #plt.bar(x=np.arange(len(mfsm_model_mean)), height=mfsm_model_mean, color="lightgray", label='RESuM')
+                ax.fill_between(x=np.arange(len(mfsm_model_mean)), y1=mfsm_model_mean-3*mfsm_model_std, y2=mfsm_model_mean+3*mfsm_model_std, color="coral",alpha=0.2, label=r'$\pm 3\sigma$')
+                ax.fill_between(x=np.arange(len(mfsm_model_mean)), y1=mfsm_model_mean-2*mfsm_model_std, y2=mfsm_model_mean+2*mfsm_model_std, color="yellow",alpha=0.2, label=r'$\pm 2\sigma$')
+                ax.fill_between(x=np.arange(len(mfsm_model_mean)), y1=mfsm_model_mean-mfsm_model_std, y2=mfsm_model_mean+mfsm_model_std, color="green",alpha=0.2, label=r'RESuM $\pm 1\sigma$')
+                
+                ymin, ymax = ax.get_ylim()
+                ax.set_ylim(ymin,ymax*1.05)
+                ax.set_ylabel(r'$y_{raw}$')
+                ax.plot(x[:],y_data[:],'.',color="black", label="Validation Data")
+                mse = mean_squared_error(y_data, mfsm_model_mean)
+                text = f"MSE: {mse:.5f} $\pm1\sigma$: {counter_1sigma/len(y_data)*100.:.0f}%  $\pm3\sigma$: {counter_2sigma/len(y_data)*100.:.0f}%  $\pm3\sigma$: {counter_3sigma/len(y_data)*100.:.0f}%"
+                plotting.place_text_corner(ax, text, fontsize=11, bbox=dict(edgecolor='gray', facecolor='none', linewidth=0.5))
+            
+            ax.set_xlabel('Simulation Trial Number')
+            legend_elements = [
+                Line2D([0], [0], marker='.', color='black', linestyle='None', label='Data'),
+                Line2D([0], [0], marker='.', color='white', linestyle='None', label='Model prediction'),
+                mpatches.Patch(color='green', alpha=0.2, label=r'$\pm 1\sigma$'),
+                mpatches.Patch(color='yellow', alpha=0.2, label=r'$\pm 2\sigma$'),
+                mpatches.Patch(color='coral', alpha=0.2, label=r'$\pm 3\sigma$')
+            ]
+
+        
+            fig.legend(handles=legend_elements, loc="upper center", ncol=len(legend_elements), fontsize='medium', frameon=False)
+            plt.tight_layout()
+            plt.show()
             return fig, [counter_1sigma/len(y_data)*100.,counter_2sigma/len(y_data)*100.,counter_3sigma/len(y_data)*100.,mse]
         
     def draw_model(self):
-            fig, ax = plt.subplots(self.mf_model.nfidelities, 1, figsize=(12, 10))
+            nrows = self.mf_model.nfidelities
+            ncols = 1
+            fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(12 * ncols, 5 * nrows), squeeze=False)
+
             for j,f in enumerate(self.mf_model.trainings_data):
+                ax = axes[j][0]
                 nsamples = 0
                 mfsm_model_mean = np.empty(shape=[0, 0])
                 mfsm_model_std = np.empty(shape=[0, 0])
@@ -162,18 +187,18 @@ class MultiFidelityVisualizer():
                         mfsm_model_mean=np.append(mfsm_model_mean,mean_mf_model[0,0])
                         mfsm_model_std=np.append(mfsm_model_std,std_mf_model[0,0])
 
-                ax[j].fill_between(x=np.arange(len(mfsm_model_mean)), y1=mfsm_model_mean-mfsm_model_std, y2=mfsm_model_mean+mfsm_model_std, color=self.colors_std[j],alpha=0.2, label=f'{f} model mean $\pm 1\sigma$')
-                ax[j].plot(np.arange(len(mfsm_model_mean)),mfsm_model_mean,color=self.colors_mean[j], label=f'{f} model mean')
-                ax[j].plot(x[:],y_data[:],'.',color="black", label="Data")
-                ymin, ymax = ax[j].get_ylim()
-                ax[j].set_ylim(ymin,ymax*1.1)
-                handles, labels = ax[j].get_legend_handles_labels()
+                ax.fill_between(x=np.arange(len(mfsm_model_mean)), y1=mfsm_model_mean-mfsm_model_std, y2=mfsm_model_mean+mfsm_model_std, color=self.colors_std[j],alpha=0.2, label=f'{f} model mean $\pm 1\sigma$')
+                ax.plot(np.arange(len(mfsm_model_mean)),mfsm_model_mean,color=self.colors_mean[j], label=f'{f} model mean')
+                ax.plot(x[:],y_data[:],'.',color="black", label="Data")
+                ymin, ymax = ax.get_ylim()
+                ax.set_ylim(ymin,ymax*1.1)
+                handles, labels = ax.get_legend_handles_labels()
                 
                 order = [2,1,0]
-                ax[j].legend([handles[idx] for idx in order],[labels[idx] for idx in order],loc=9, bbox_to_anchor=(0.665,1.),ncol=3)
-                ax[j].set_ylabel('Data and Model Prediction')
+                ax.legend([handles[idx] for idx in order],[labels[idx] for idx in order],loc=9, bbox_to_anchor=(0.665,1.),ncol=3)
+                ax.set_ylabel('Data and Model Prediction')
                 if j == (self.mf_model.nfidelities-1):
-                    ax[j].set_xlabel('Data Point')
+                    ax.set_xlabel('Data Point')
             return fig
     
     def draw_model_marginalized(self, keep_axis=0, grid_steps=10):
@@ -186,11 +211,17 @@ class MultiFidelityVisualizer():
             points = np.stack([m.flatten() for m in mesh], axis=1)
             mesh_grid_list = points.tolist()
 
-            fig, ax = plt.subplots(self.mf_model.nfidelities, 1, figsize=(12, 10))
+            nrows = self.mf_model.nfidelities
+            ncols = 1
+            fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(12 * ncols, 5 * nrows), squeeze=False)
+
             for j in range(self.mf_model.nfidelities):
+                ax = axes[j][0]
                 mfsm_model_mean = []
                 mfsm_model_var = []
                 x_train = mesh_grid_list
+                if j == 0:
+                     print(f"Warning: There are {self.mf_model.nfidelities}x {len(x_train)} grid points to process... This can take a while")
                 #y_train = self.mf_model.trainings_data[f][1]
                 x_train = np.atleast_2d(x_train)
 
@@ -208,7 +239,6 @@ class MultiFidelityVisualizer():
                 grid_shape = [grid_steps] * len(self.parameters)
                 y_mean_grid = y_mean.reshape(grid_shape)
                 y_var_grid = y_var.reshape(grid_shape)
-    
                 all_grid_axes = list(range(len(self.parameters)))
                 marginalize_axes = tuple(ax for ax in all_grid_axes if ax != keep_axis)
                 # Compute the marginal mean by averaging over the inactive dimensions.
@@ -218,20 +248,20 @@ class MultiFidelityVisualizer():
                 y_var_marginalized = np.mean(y_var_grid, axis=marginalize_axes) + np.var(y_mean_grid, axis=marginalize_axes)
                 y_std_marginalized = np.sqrt(y_var_marginalized)
 
-                ax[j].fill_between(x_grid_list[keep_axis], y1=y_marginalized-3*y_std_marginalized, y2=y_marginalized+3*y_std_marginalized, color=self.colors_std[j],alpha=0.2, label=f'{j} model mean $\pm 3\sigma$')
-                ax[j].fill_between(x_grid_list[keep_axis], y1=y_marginalized-2*y_std_marginalized, y2=y_marginalized+2*y_std_marginalized, color=self.colors_std[j],alpha=0.2, label=f'{j} model mean $\pm 2\sigma$')
-                ax[j].fill_between(x_grid_list[keep_axis], y1=y_marginalized-y_std_marginalized, y2=y_marginalized+y_std_marginalized, color=self.colors_std[j],alpha=0.2, label=f'{j} model mean $\pm 1\sigma$')
-                ax[j].plot(x_grid_list[keep_axis],y_marginalized,color=self.colors_mean[j], label=f'{j} model mean')
-                #ax[j].plot(x[:],y_data[:],'.',color="black", label="Data")
-                ymin, ymax = ax[j].get_ylim()
-                ax[j].set_ylim(ymin*0.95,ymax*1.05)
+                ax.fill_between(x_grid_list[keep_axis], y1=y_marginalized-3*y_std_marginalized, y2=y_marginalized+3*y_std_marginalized, color=self.colors_std[j],alpha=0.2, label=f'{j} model mean $\pm 3\sigma$')
+                ax.fill_between(x_grid_list[keep_axis], y1=y_marginalized-2*y_std_marginalized, y2=y_marginalized+2*y_std_marginalized, color=self.colors_std[j],alpha=0.2, label=f'{j} model mean $\pm 2\sigma$')
+                ax.fill_between(x_grid_list[keep_axis], y1=y_marginalized-y_std_marginalized, y2=y_marginalized+y_std_marginalized, color=self.colors_std[j],alpha=0.2, label=f'{j} model mean $\pm 1\sigma$')
+                ax.plot(x_grid_list[keep_axis],y_marginalized,color=self.colors_mean[j], label=f'{j} model mean')
+                #ax.plot(x[:],y_data[:],'.',color="black", label="Data")
+                ymin, ymax = ax.get_ylim()
+                ax.set_ylim(ymin*0.95,ymax*1.05)
                 #handles, labels = ax[j].get_legend_handles_labels()
                 
                 #order = [2,1,0]
-                #ax[j].legend([handles[idx] for idx in order],[labels[idx] for idx in order],loc=9, bbox_to_anchor=(0.665,1.),ncol=3)
-                ax[j].set_ylabel('Data and Model Prediction')
+                #ax.legend([handles[idx] for idx in order],[labels[idx] for idx in order],loc=9, bbox_to_anchor=(0.665,1.),ncol=3)
+                ax.set_ylabel('Data and Model Prediction')
                 if j == (self.mf_model.nfidelities-1):
-                    ax[j].set_xlabel(list(self.parameters.keys())[keep_axis])
+                    ax.set_xlabel(list(self.parameters.keys())[keep_axis])
             
             return fig
     
