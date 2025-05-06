@@ -53,18 +53,12 @@ class MFGPModel():
             y_train.append(y_tmp)
         
         X_train, Y_train = convert_xy_lists_to_arrays(x_train, y_train)
-        # Define kernels for each fidelity
-        #kernels_list = []
-        #for f in range(self.nfidelities-1):
-        #    kernels_list.append(GPy.kern.RBF(X_train[0].shape[0] - 1))
-        #    kernels_list.append(GPy.kern.RBF(1))
-
         
         # Define kernels for each fidelity
         kernels_list = []
-        '''
+
         for f in range(self.nfidelities - 1):
-            rbf1 = GPy.kern.RBF(input_dim=X_train[0].shape[0] - 1, ARD=True, name=f"RBF_rho_{f}")
+            rbf1 = GPy.kern.RBF(input_dim=X_train[0].shape[0] - 1, name=f"RBF_rho_{f}")
             rbf2 = GPy.kern.RBF(input_dim=1, name=f"RBF_delta_{f}")
 
             # Set custom lengthscale if provided
@@ -74,37 +68,7 @@ class MFGPModel():
 
             kernels_list.append(rbf1)
             kernels_list.append(rbf2)
-        '''
-        for f in range(self.nfidelities - 1):
-            #rbf1 = GPy.kern.RBF(input_dim=X_train[0].shape[0] - 1, ARD=True, name=f"RBF_rho_{f}")
-            rbf1 = (GPy.kern.RBF(X_train[0].shape[0] - 1, ARD=True) +
-                GPy.kern.Bias(X_train[0].shape[0] - 1) +
-                GPy.kern.Matern32(X_train[0].shape[0] - 1, ARD=True))
-            #rbf2 = GPy.kern.RBF(input_dim=1, name=f"RBF_delta_{f}")
-            rbf2 = GPy.kern.Matern32(1, ARD=True)
 
-            # Set custom initializations
-            if custom_lengthscale is not None:
-                rbf1.lengthscale = custom_lengthscale
-                rbf2.lengthscale = custom_lengthscale
-            #else:
-            #    rbf1.lengthscale = 1.0  # sensible default
-            #    rbf2.lengthscale = 1.0
-
-            # New: set reasonable variance
-            #rbf1.variance = 1.0
-            #rbf2.variance = 1.0
-
-            # New: constrain lengthscale
-            #rbf1.lengthscale.constrain_bounded(0.1, 10.)
-            #rbf2.lengthscale.constrain_bounded(0.1, 10.)
-
-            # Optional: constrain variance to positive reasonable range
-            #rbf1.variance.constrain_bounded(1e-2, 10.)
-            #rbf2.variance.constrain_bounded(1e-2, 10.)
-
-            kernels_list.append(rbf1)
-            kernels_list.append(rbf2)
 
         lin_mf_kernel = kernels.LinearMultiFidelityKernel(kernels_list)
         gpy_lin_mf_model = GPyLinearMultiFidelityModel(X_train, Y_train, lin_mf_kernel, n_fidelities=len(self.fidelities))
