@@ -1,2 +1,4 @@
 dist/
 resum.egg-info/
+examples/legend-neutron-moderator/in/data/lf/neutron.csv
+examples/legend-neutron-moderator/in/data/lf/neutron.h5
