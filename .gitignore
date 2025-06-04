@@ -2,3 +2,7 @@ dist/
 resum.egg-info/
 examples/legend-neutron-moderator/in/data/lf/neutron.csv
 examples/legend-neutron-moderator/in/data/lf/neutron.h5
+
+examples/coherent/in/data/lf/*.csv
+examples/coherent/in/data/hf/*.csv
+examples/coherent/in/data/processed/
