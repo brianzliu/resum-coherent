@@ -183,18 +183,24 @@ class MFGPModel():
         return var
 
     def get_min(self, parameters, x0=None, fidelity=2):
+        """Return the minimum of the surrogate model within the parameter bounds."""
 
         def f(x):
-            self.evaluate_model(x, fidelity)
+            return self.evaluate_model(x, fidelity)
 
-        bnds=[]
-        for i in parameters:
-            bnds.append((parameters[i][0],parameters[i][1]))
-            if x0==None:
-                x0.append((parameters[i][1]-parameters[i][0])/2.)
-        x0=np.array(x0)
-        
-        res = minimize(f, x0,bounds=bnds)
+        bnds = []
+        if x0 is None:
+            x0 = []
+            for key in parameters:
+                bnds.append((parameters[key][0], parameters[key][1]))
+                x0.append((parameters[key][1] + parameters[key][0]) / 2.0)
+            x0 = np.array(x0)
+        else:
+            x0 = np.array(x0)
+            for key in parameters:
+                bnds.append((parameters[key][0], parameters[key][1]))
+
+        res = minimize(f, x0, bounds=bnds)
         return res.x, res.fun
     
     def get_min_constrained(self, parameters, fidelity=2):
