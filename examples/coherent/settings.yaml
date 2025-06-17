@@ -4,7 +4,7 @@ cnp_settings:
   context_is_subset: True
   batch_size_train: 3000
   files_per_batch_train: 50
-  batch_size_predict: [50000,10000000]
+  batch_size_predict: [3000, 15000] # [50000,10000000]  # might have to change these values and make them smaller, especially for high fidelity
   files_per_batch_predict: 1
   number_of_walkers: 1
   config_wise: False
@@ -25,7 +25,7 @@ simulation_settings:
   target_range: [0,1]  # Binary: signal event detected (1) or background (0)
   signal_condition: ["veto_active==1"]
   weights_labels: ["veto_active"]
-  # Design parameter boundaries (from actual experimental data)
+  # Design parameter boundaries (from actual experimental data)  # need all of these for MFGP
   theta_min: [16.2, 10]    # Min: water_shielding=16.2mm (Veto4), veto_thickness=10mm (Veto1)
   theta_max: [116.2, 110]  # Max: water_shielding=116.2mm (Veto1), veto_thickness=110mm (Veto4)
   theta_fixed: [76.2, 50]  # Baseline configuration
@@ -34,8 +34,8 @@ simulation_settings:
 
 path_settings:
   version: v1.0_coherent
-  path_to_files_train: ../coherent/in/data/lf/
-  path_to_files_predict: ["../coherent/in/data/lf/","../coherent/in/data/hf/"]
+  path_to_files_train: ../coherent/in/data/processed/lf/  # redirect to hdf5 file directory
+  path_to_files_predict: ["../coherent/in/data/processed/lf/","../coherent/in/data/processed/hf/"]  # redirect to hdf5 file directory
   iteration: [0,0]
   fidelity: [0,1]
   path_to_files_validation: ../coherent/out/cnp/cnp_v1.0_coherent_output_validation.csv
