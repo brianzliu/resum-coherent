@@ -24,7 +24,7 @@ simulation_settings:
   target_headers: ["veto_active"]
   target_range: [0,1]  # Binary: signal event detected (1) or background (0)
   signal_condition: ["veto_active==1"]
-  weights_labels: ["veto_active"]
+  weights_labels: ["veto_active_scaling"]
   # Design parameter boundaries (from actual experimental data)  # need all of these for MFGP
   theta_min: [16.2, 10]    # Min: water_shielding=16.2mm (Veto4), veto_thickness=10mm (Veto1)
   theta_max: [116.2, 110]  # Max: water_shielding=116.2mm (Veto1), veto_thickness=110mm (Veto4)
