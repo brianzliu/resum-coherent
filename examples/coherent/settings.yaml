@@ -1,5 +1,5 @@
 cnp_settings:
-  training_epochs: 1
+  training_epochs: 5
   context_ratio: 0.3333333
   context_is_subset: True
   batch_size_train: 3000

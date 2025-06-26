@@ -238,7 +238,7 @@ class DataGeneration(object):
 
             # Identify background (0) and signal (1) indices
             background_indices = np.where(target == 0)[0]
-            all_target_names = f["target_headers"][:]
+            all_target_names = f["target_labels"][:]
             all_target_names=[label.decode("utf-8") for label in all_target_names]
 
             # Function to parse condition strings dynamically
