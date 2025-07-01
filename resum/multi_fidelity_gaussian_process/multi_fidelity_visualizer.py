@@ -16,9 +16,9 @@ class MultiFidelityVisualizer():
         self.colors_mean = ['lightseagreen','teal','orangered']
 
     # Drawings of the model predictions projecting each dimension on a fixed point in space for the remaining dimensions
-    def draw_model_projections(self, fig):
+    def draw_model_projections(self, fig, y_lim=None):
         SPLIT = 100
-        ncol=3
+        ncol=2
 
         #fig,ax = plt.subplots(nrow,ncol,figsize=(15, 5),constrained_layout=True)
         ax = fig.axes
@@ -39,16 +39,42 @@ class MultiFidelityVisualizer():
                 f_mean_mf_model, f_var_mf_model = self.mf_model.model.predict(X_plot[f*SPLIT:(f+1)*SPLIT])
                 f_std_mf_model = np.sqrt(f_var_mf_model)
 
+                # Determine label based on fidelity: the first two fidelities (0,1) are CNP, the last one (2) is raw
+                if f < 2:
+                    label_mean = r'$y_{CNP}$' if (i == 0) else "_nolegend_"  # show only once in legend
+                    label_std  = r'$y_{CNP}\;\pm\;1\sigma$' if (i == 0) else "_nolegend_"
+                else:
+                    label_mean = r'$y_{raw}$' if (i == 0) else "_nolegend_"
+                    label_std  = r'$y_{raw}\;\pm\;1\sigma$' if (i == 0) else "_nolegend_"
+
                 ax[indices[i]].fill_between(x_tmp.flatten(), (f_mean_mf_model - f_std_mf_model).flatten(), 
-                            (f_mean_mf_model + f_std_mf_model).flatten(), color=self.colors_std[f], alpha=0.1)
-                ax[indices[i]].plot(x_tmp,f_mean_mf_model, '--', color=self.colors_mean[f])
+                            (f_mean_mf_model + f_std_mf_model).flatten(), color=self.colors_std[f], alpha=0.1, label=label_std)
+                ax[indices[i]].plot(x_tmp,f_mean_mf_model, '--', color=self.colors_mean[f], label=label_mean)
 
             ax[indices[i]].set_xlabel(p, fontsize=10)
-            ax[indices[i]].set_ylabel(r'$y_{raw}$')
+            ax[indices[i]].set_ylabel(r'$y$')
             ax[indices[i]].set_xlim(self.parameters[p][0], self.parameters[p][1])
             
+            # Apply optional y-axis limit if provided for zoomed view
+            if y_lim is not None:
+                ax[indices[i]].set_ylim(*y_lim)
+
+            # After potential limit adjustments, set y-ticks every 0.01
+            ymin, ymax = ax[indices[i]].get_ylim()
+            ax[indices[i]].set_yticks(np.arange(np.floor(ymin * 100) / 100,
+                                               np.ceil(ymax * 100) / 100 + 0.01, 0.01))
+
         for i in range(len(self.parameters),len(ax)): 
             ax[i].set_axis_off()
+
+        # Add a single shared legend outside of the plotting loop (only once for the whole figure)
+        if len(fig.axes) > 0:
+            handles, labels = ax[indices[0]].get_legend_handles_labels()
+            # Remove duplicate/no-legend entries
+            filtered = [(h,l) for h,l in zip(handles,labels) if l != "_nolegend_"]
+            if filtered:
+                fig.legend([h for h,l in filtered], [l for h,l in filtered], loc="upper center", ncol=len(filtered), frameon=False)
+
         return fig
 
     # Drawings of the aquisition function
@@ -263,6 +289,60 @@ class MultiFidelityVisualizer():
                 if j == (self.mf_model.nfidelities-1):
                     ax.set_xlabel(list(self.parameters.keys())[keep_axis])
             
+            return fig
+    
+    def draw_yraw_contour(self, param_x, param_y, grid_steps=40, levels=20, cmap="viridis"):
+            """Draw a filled contour plot of the high-fidelity (y_raw) prediction as function of two parameters.
+
+            Parameters
+            ----------
+            param_x, param_y : str
+                Names of the parameters to be shown on the horizontal and vertical axes, respectively.
+            grid_steps : int, optional
+                Number of grid points along each axis.
+            levels : int, optional
+                Number of contour levels.
+            cmap : str, optional
+                Colormap for the filled contours.
+            """
+
+            # Validate parameter names
+            if param_x not in self.parameters or param_y not in self.parameters:
+                raise ValueError(f"Parameters {param_x} and/or {param_y} not found in parameter list.")
+
+            # Build grid for the two selected parameters
+            x_vals = np.linspace(*self.parameters[param_x], grid_steps)
+            y_vals = np.linspace(*self.parameters[param_y], grid_steps)
+            Xg, Yg = np.meshgrid(x_vals, y_vals)
+
+            # Prepare points to evaluate
+            points = []
+            for y in y_vals:
+                for x in x_vals:
+                    x_vec = self.x_fixed.copy()
+                    x_vec[list(self.parameters.keys()).index(param_x)] = x
+                    x_vec[list(self.parameters.keys()).index(param_y)] = y
+                    points.append(x_vec)
+
+            points = np.array(points)
+            # Evaluate model at high fidelity (index 2 corresponds to y_raw)
+            SPLIT = 1
+            # Build list for convert_x_list_to_array
+            x_list = [points, points, points]
+            X_array = convert_x_list_to_array(x_list)
+            mean_pred, _ = self.mf_model.model.predict(X_array[2*len(points):3*len(points)])
+            Z = mean_pred.reshape(grid_steps, grid_steps)
+
+            # Create figure
+            fig, ax = plt.subplots(figsize=(8, 6), constrained_layout=True)
+            contour = ax.contourf(Xg, Yg, Z, levels=levels, cmap=cmap)
+            cbar = fig.colorbar(contour, ax=ax)
+            cbar.set_label(r"Predicted $y_{raw}$")
+
+            ax.set_xlabel(param_x)
+            ax.set_ylabel(param_y)
+            ax.set_title(r"Predicted $y_{raw}$ contour")
+
             return fig
     
     

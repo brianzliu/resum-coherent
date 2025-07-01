@@ -62,12 +62,12 @@ class HDF5Dataset(IterableDataset):
         for file in self.files:
             try:
                 with h5py.File(file, "r") as hdf:
-                        if self.parameters['target']['key'] in hdf:
-                            num_rows = hdf[self.parameters['target']['key']].shape[0]
-                            self.dataset_size += num_rows
-                            # Update max row count if this file has more rows
-                            if num_rows > max_rows:
-                                max_rows = num_rows
+                    if self.parameters['target']['key'] in hdf:
+                        num_rows = hdf[self.parameters['target']['key']].shape[0]
+                        self.dataset_size += num_rows
+                        # Update max row count if this file has more rows
+                        if num_rows > max_rows:
+                            max_rows = num_rows
             except (OSError, IOError) as e:
                 print(f"Skipping corrupted or unreadable file: {file}")
                 print(f"Reason: {e}")
@@ -90,7 +90,7 @@ class HDF5Dataset(IterableDataset):
 
         while cycle_idx < self.total_cycles_per_epoch:
             for i in range(0, len(self.files), self.files_per_batch):  # Loop over file chunks
-                if i == 0  and self.epoch_counter==0:
+                if i == 0 and self.epoch_counter==0:
                     self.phi_selected_indices=utils.read_selected_indices(self.files[0],self.parameters['phi'])
                     if len(self.parameters['theta']['selected_labels'])> 0:
                         self.theta_selected_indices=utils.read_selected_indices(self.files[0],self.parameters['theta'])
@@ -111,35 +111,50 @@ class HDF5Dataset(IterableDataset):
 
                 for j, file in enumerate(selected_files):
                     with h5py.File(file, "r") as hdf:
-                        phi=hdf[self.parameters['phi']['key']][start_idx:end_idx, self.phi_selected_indices]
+                        # Check if we have enough data in this file
+                        file_length = hdf[self.parameters['target']['key']].shape[0]
+                        if start_idx >= file_length:
+                            print(f"Warning: start_idx {start_idx} >= file_length {file_length} for {file}. Still works but array slicing returns empty array.")
+                        
+                        # Adjust end_idx to not exceed file bounds
+                        actual_end_idx = min(end_idx, file_length)
+                        if actual_end_idx <= start_idx:
+                            print(f"Warning: No valid data range for {file}. Still works but array slicing returns empty array.")
+                        
+                        phi=hdf[self.parameters['phi']['key']][start_idx:actual_end_idx, self.phi_selected_indices]
                         if self.theta_selected_indices != None:
-                            if  len(hdf[self.parameters['theta']['key']][:].shape) == 1:
+                            if len(hdf[self.parameters['theta']['key']][:].shape) == 1:
                                 theta = hdf[self.parameters['theta']['key']][self.theta_selected_indices]
                                 theta = np.tile(theta, (phi.shape[0], 1))
                             else:
-                                theta = hdf[self.parameters['theta']['key']][start_idx:end_idx, self.theta_selected_indices]
+                                theta = hdf[self.parameters['theta']['key']][start_idx:actual_end_idx, self.theta_selected_indices]
                             features = np.hstack([theta, phi])
                         else:
                             features = phi
 
                         if np.ndim(hdf[self.parameters['target']['key']]) > 1:
-                            target=hdf[self.parameters['target']['key']][start_idx:end_idx, self.target_selected_indices]
+                            target=hdf[self.parameters['target']['key']][start_idx:actual_end_idx, self.target_selected_indices]
                         else:
-                            target=hdf[self.parameters['target']['key']][start_idx:end_idx]
+                            target=hdf[self.parameters['target']['key']][start_idx:actual_end_idx]
                             target=target.reshape(-1, 1)
 
                         # Stack rows from this file
-
                         file_data = np.hstack([features, target])
-
-                        batch.extend(file_data.tolist())
-                        used_rows += len(file_data)
+                        
+                        # Only add if we have actual data
+                        if file_data.shape[0] > 0:
+                            batch.extend(file_data.tolist())
+                            used_rows += len(file_data)
                 # end loop over single file
-                # Yield batch of batch-size shuffled samples
-                random.shuffle(batch)
-                yield torch.tensor(batch, dtype=torch.float32)
-
-                self.total_batches += 1
+                
+                # Only yield if we have data in the batch
+                if len(batch) > 0:
+                    # Yield batch of batch-size shuffled samples
+                    random.shuffle(batch)
+                    yield torch.tensor(batch, dtype=torch.float32)
+                    self.total_batches += 1
+                else:
+                    print(f"Warning: Empty batch at epoch_counter {self.epoch_counter}. Skipping.")
             # end loop over file chunk
             cycle_idx += 1
 
@@ -367,12 +382,34 @@ class DataGeneration(object):
         Returns:
         - CNPRegressionDescription(query=((batch_context_x, batch_context_y), batch_target_x), target_y=batch_target_y)
         """
+        
+        # Safety check for empty batches
+        if batch.numel() == 0:
+            raise ValueError(f"Received empty batch with shape {batch.shape}. This indicates an issue with the data loading process.")
+        
+        # Safety check for 1D batch (shouldn't happen after HDF5Dataset fix, but keep as backup)
+        if batch.ndim == 1:
+            expected_total_features = self.feature_size + self.target_size
+            if len(batch) % expected_total_features == 0:
+                batch = batch.reshape(-1, expected_total_features)
+                print(f"Warning: Reshaped 1D batch to {batch.shape}")
+            else:
+                raise ValueError(f"Cannot reshape 1D batch of size {len(batch)} into 2D with {expected_total_features} features per row")
 
         batch_size = batch.shape[0]  # Actual batch size (may be < 3000)
         
+        # Ensure we have at least one sample for context
+        if batch_size == 0:
+            raise ValueError("Cannot process batch with 0 samples")
+        
         # Dynamically compute num_context and num_target
-        num_context = int(batch_size * self._context_ratio)
+        num_context = max(1, int(batch_size * self._context_ratio))  # At least 1 context point
         num_target = batch_size - num_context  # Ensure it sums to batch_size
+        
+        # Ensure we have valid splits
+        if num_target <= 0:
+            num_context = batch_size - 1 if batch_size > 1 else 1
+            num_target = max(1, batch_size - num_context)
         
         # Shuffle the batch to ensure randomness
         batch = batch[torch.randperm(batch.shape[0])]

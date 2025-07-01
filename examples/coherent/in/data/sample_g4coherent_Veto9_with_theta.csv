@@ -1,0 +1,6 @@
+fEventID,water_shielding_mm,veto_thickness_mm,fGenX,fGenY,fGenZ,fEventEnergy,fMomentumX,fMomentumY,fMomentumZ,fEDepNR,fEDepVeto,source_file,veto_active
+0,86.2,40,77.26,1365.0,-414.24,0.0,26.65,-389.77,607.63,0.0,0.0,output_29.root,0
+1,86.2,40,-469.5,1365.0,-421.66,0.0,-285.4,-448.48,149.86,0.0,0.0,output_29.root,0
+2,86.2,40,-148.36,1365.0,-355.78,0.0,-139.65,-194.37,196.21,0.0,0.0,output_29.root,0
+3,86.2,40,80.61,1365.0,-183.53,0.0,-1.44,-42.81,-116.82,0.0,0.0,output_29.root,0
+4,86.2,40,-373.03,1365.0,357.26,0.0,-363.87,-296.65,-636.17,0.0,4.75,output_29.root,1
