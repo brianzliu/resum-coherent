@@ -1,5 +1,5 @@
 cnp_settings:
-  training_epochs: 1 # 5
+  training_epochs: 20 # 1
   context_ratio: 0.3333333
   context_is_subset: True
   batch_size_train: 3000
@@ -33,7 +33,7 @@ simulation_settings:
   hf_cost: 10  # HF simulations much more expensive
 
 path_settings:
-  version: v1.1_coherent
+  version: v2.0_c_20ep
   path_to_files_train: ../coherent/in/data/processed/lf/  # redirect to hdf5 file directory
   path_to_files_predict: ["../coherent/in/data/processed/lf/","../coherent/in/data/processed/hf/"]  # redirect to hdf5 file directory
   iteration: [0,0]
