@@ -2,6 +2,7 @@ name: coherent2
 channels:
   - defaults
   - pytorch
+  - nvidia
   - conda-forge
   - https://repo.anaconda.com/pkgs/main
   - https://repo.anaconda.com/pkgs/r
@@ -24,11 +25,7 @@ dependencies:
   - colorama=0.4.6
   - comm=0.2.2
   - contourpy=1.3.2
-  - cpuonly=2.0
   - cpython=3.12.11
-  - cuda-cudart=12.9.79
-  - cuda-cudart_linux-64=12.9.79
-  - cuda-version=12.9
   - cycler=0.12.1
   - cyrus-sasl=2.1.27
   - debugpy=1.8.14
@@ -173,8 +170,6 @@ dependencies:
   - python-dateutil=2.9.0.post0
   - python-tzdata=2025.2
   - python_abi=3.12
-  - pytorch=2.2.2
-  - pytorch-mutex=1.0
   - pytz=2025.2
   - pyyaml=6.0.2
   - pyzmq=26.2.0
@@ -202,8 +197,6 @@ dependencies:
   - threadpoolctl=3.6.0
   - tk=8.6.13
   - tomli=2.2.1
-  - torchaudio=2.2.2
-  - torchvision=0.17.2
   - tornado=6.5.1
   - tqdm=4.67.1
   - traitlets=5.14.3
@@ -266,6 +259,9 @@ dependencies:
       - sklearn-compat==0.1.3
       - snap==0.5
       - toolz==1.0.0
+      - torch==2.7.1
+      - torchvision
+      - torchaudio
       - xarray==2025.6.1
       - xarray-einstats==0.9.1
 prefix: /home/tidmad/miniconda3/envs/coherent2

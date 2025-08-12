@@ -29,7 +29,7 @@ except Exception as e:
 
 
 # %%
-with open("../coherent/settings.yaml", "r") as f:
+with open("../coherent/settings_newdata.yaml", "r") as f:
     config_file = yaml.safe_load(f)
 
 TRAINING_EPOCHS = int(config_file["cnp_settings"]["training_epochs"]) # Total number of training points: training_iterations * batch_size * max_content_points
@@ -42,6 +42,10 @@ is_binary = target_range[0] >= 0 and target_range[1] <= 1
 
 path_out = config_file["path_settings"]["path_out_cnp"]
 version = config_file["path_settings"]["version"]
+
+# Create directory for saving figures
+figures_dir = os.path.join(path_out, f'cnp_{version}_figures')
+os.makedirs(figures_dir, exist_ok=True)
 
 # %%
 x_size, y_size = utils.get_feature_and_label_size(config_file)
@@ -146,16 +150,26 @@ for it_epoch in range(TRAINING_EPOCHS):
             if y_size ==1:
                 fig = plotting.plot(mu, batch_formated.target_y[0].detach().numpy(), f'{loss:.2f}', mu_testing, batch_formated_test.target_y[0].detach().numpy(), f'{loss_testing:.2f}', target_range, it_batch)
                 writer.add_figure('Prediction/train_vs_test', fig, global_step=test_idx)
+                # Save figure to disk
+                fig_path = os.path.join(figures_dir, f'train_vs_test_iteration_{it_batch}.png')
+                plt.figure(fig.number)
+                plt.savefig(fig_path, dpi=300, bbox_inches='tight')
+                plt.close(fig)  # Close figure to free memory
             else:
                 for k in range(y_size):
                     fig = plotting.plot(mu[:,k], batch_formated.target_y[0].detach().numpy()[:,k], f'{loss:.2f}', mu_testing[:,k], batch_formated_test.target_y[0].detach().numpy()[:,k], f'{loss_testing:.2f}', target_range, it_batch)
                     writer.add_figure(f'Prediction/train_vs_test_k{k}', fig, global_step=test_idx)
+                    # Save figure to disk
+                    fig_path = os.path.join(figures_dir, f'train_vs_test_k{k}_iteration_{it_batch}.png')
+                    plt.figure(fig.number)
+                    plt.savefig(fig_path, dpi=300, bbox_inches='tight')
+                    plt.close(fig)  # Close figure to free memory
             test_idx+=1
     
         it_batch+=1
 
 writer.close()
-torch.save(model.state_dict(), f'{path_out}/cnp_{version}_model.pth')
+torch.save(model.state_dict(), f'{path_out}/cnp_{version}_model_20epochs.pth')
 
 
 # %%

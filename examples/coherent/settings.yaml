@@ -1,18 +1,18 @@
 cnp_settings:
-  training_epochs: 170
+  training_epochs: 20
   context_ratio: 0.3333333
   context_is_subset: True
-  batch_size_train: 10000
-  files_per_batch_train: 4
-  batch_size_predict: [15000, 20000] # [50000,10000000]  # might have to change these values and make them smaller, especially for high fidelity
-  files_per_batch_predict: 3
+  batch_size_train: 3000
+  files_per_batch_train: 50
+  batch_size_predict: [1000, 150] # [50000,10000000]  # might have to change these values and make them smaller, especially for high fidelity
+  files_per_batch_predict: 1
   number_of_walkers: 1
   config_wise: False
   use_data_augmentation: "mixup" #"smote" #False #"mixup"
   use_beta: [0.1,0.1] # uniform => None, beta => [a,b] U-shape [0.1,0.1] Uniform [1.,1.] falling [0.2,0.5] rising [0.2,0.5]
   signal_to_background_ratio: "" # "_1to4" # used for smote augmentation
   ratio_testing_vs_training: 1/40
-  plot_after: 200
+  plot_after: 1000  # Increased from 200 to 1000 to reduce plotting overhead for HF data
 
 simulation_settings:
   # Coherent neutrino scattering detector design optimization
@@ -33,7 +33,7 @@ simulation_settings:
   hf_cost: 2000  # HF simulations much more expensive
 
 path_settings:
-  version: v1.0_coherent
+  version: v102.0_coherent
   path_to_files_train: "../coherent/in/data/processed/lf/"  # redirect to hdf5 file directory
   path_to_files_predict: ["../coherent/in/data/processed/lf/","../coherent/in/data/processed/hf/"]  # redirect to hdf5 file directory
   iteration: [0,0]
@@ -41,4 +41,4 @@ path_settings:
   path_to_files_validation: ../coherent/out/cnp/cnp_v1.0_coherent_output_validation.csv
   path_out_cnp:  ../coherent/out/cnp
   path_out_mfgp:  ../coherent/out/mfgp
-  path_out_pce: ../coherent/out/pce 
+  path_out_pce: ../coherent/out/pce

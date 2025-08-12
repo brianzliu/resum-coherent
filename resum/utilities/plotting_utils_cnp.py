@@ -236,29 +236,47 @@ def get_marginialized_all(config_file, grid_steps=100):
         y_sim_min=1.
         y_sim_max=0.
         for f in fidelities:
-                x_data.append(data.loc[(data['fidelity']==f)][x_labels].to_numpy())
-                y_data.append(data.loc[(data['fidelity']==f)][y_label_cnp].to_numpy())
-                y_sim.append(data.loc[(data['fidelity']==f)][y_label_sim].to_numpy())
+                x_fidelity = data.loc[(data['fidelity']==f)][x_labels].to_numpy()
+                y_cnp_fidelity = data.loc[(data['fidelity']==f)][y_label_cnp].to_numpy()
+                y_raw_fidelity = data.loc[(data['fidelity']==f)][y_label_sim].to_numpy()
+                
+                # Skip empty arrays
+                if len(y_cnp_fidelity) == 0 or len(y_raw_fidelity) == 0:
+                    continue
+                    
+                x_data.append(x_fidelity)
+                y_data.append(y_cnp_fidelity)
+                y_sim.append(y_raw_fidelity)
                 y_data_min=min(y_data_min,np.min(y_data[-1]))
                 y_data_max=max(y_data_max,np.max(y_data[-1]))
                 y_sim_min=min(y_sim_min,np.min(y_sim[-1]))
                 y_sim_max=max(y_sim_max,np.max(y_sim[-1]))
 
         colors=[["salmon","darkturquoise"],["darkred","teal"],["orangedred","darkslategrey"]]
-        markers=['.','s','o''x']
+        markers=['.','s','o','x']
         grid_steps = 100
         n_params = len(x_labels)
         n_cols = 2
         n_rows = int(np.ceil(n_params / n_cols))
 
+        # Check if we have any valid data
+        if len(x_data) == 0:
+            print("No valid data found for plotting")
+            fig, ax = plt.subplots(1, 1, figsize=(6, 4))
+            ax.text(0.5, 0.5, 'No data available for plotting', 
+                   horizontalalignment='center', verticalalignment='center', 
+                   transform=ax.transAxes, fontsize=14)
+            return fig
+
         fig, axes = plt.subplots(n_rows, n_cols, figsize=(6 * n_cols, 4 * n_rows), squeeze=False)
 
         for i, param in enumerate(x_labels):
+                row = i // n_cols
+                col = i % n_cols
+                ax1 = axes[row][col]
+                ax2 = None  # Initialize ax2
+                
                 for f in range(len(x_data)):
-                        row = i // n_cols
-                        col = i % n_cols
-                        ax1 = axes[row][col]
-
                         # Get marginalized draws
                         x_cnp, y_cnp,_,_ = get_marginalized(x_data=x_data[f], y_data=y_data[f], x_min=x_min[i], x_max=x_max[i], keep_axis=i, grid_steps=grid_steps)
                         x_raw, y_raw,_,_ = get_marginalized(x_data=x_data[f], y_data=y_sim[f],  x_min=x_min[i], x_max=x_max[i], keep_axis=i, grid_steps=grid_steps)
@@ -275,22 +293,24 @@ def get_marginialized_all(config_file, grid_steps=100):
                                 ax2.set_ylim(y_sim_min*0.8,y_sim_max*1.005)
                                 ax2.tick_params(axis='y', labelcolor=colors[f][1])
 
-                        # Plot on second axis
-                        
-                        p2 = ax2.scatter(x_raw, y_raw, color=colors[f][1],alpha=1., marker=markers[f])
+                        # Plot on second axis (only if ax2 is created)
+                        if ax2 is not None:
+                                p2 = ax2.scatter(x_raw, y_raw, color=colors[f][1],alpha=1., marker=markers[f])
 
 
         handles = []
         for j in range(len(x_data)):
-                handles.append(mlines.Line2D([], [], color=colors[j][0], marker=markers[j], linestyle='None', label='$y_{cnp}$'+f'(f={j})'))
-                handles.append( mlines.Line2D([], [], color=colors[j][1], marker=markers[j], linestyle='None', label='$y_{raw}$'+f'(f={j})'))
-        fig.legend(
-                handles=handles,
-                loc='lower center',
-                ncol=2*len(x_data),
-                title='',
-                bbox_to_anchor=(0.5, -0.05)
-                )
+                handles.append(mlines.Line2D([], [], color=colors[j][0], marker=markers[j], linestyle='None', label='$y_{cnp}$'+f'(f={fidelities[j]})'))
+                handles.append( mlines.Line2D([], [], color=colors[j][1], marker=markers[j], linestyle='None', label='$y_{raw}$'+f'(f={fidelities[j]})'))
+        
+        if len(handles) > 0:
+                fig.legend(
+                        handles=handles,
+                        loc='lower center',
+                        ncol=2*len(x_data),
+                        title='',
+                        bbox_to_anchor=(0.5, -0.05)
+                        )
 
         # Adjust layout
         plt.tight_layout()

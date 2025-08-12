@@ -35,7 +35,7 @@ class HDF5Dataset(IterableDataset):
         self.hdf5_dir = hdf5_dir
         self.batch_size = batch_size
         self.files_per_batch = files_per_batch
-        self.rows_per_file = batch_size // files_per_batch
+        self.rows_per_file_per_batch = batch_size // files_per_batch
         self.epoch_counter = 0  # Tracks row block
         self.total_batches = 0
         self.parameters = parameters
@@ -49,7 +49,7 @@ class HDF5Dataset(IterableDataset):
         self.dataset_size =0 
         # Total row cycles per file to complete an epoch
         self.nrows = self.get_max_number_of_rows()
-        self.total_cycles_per_epoch = self.nrows // self.rows_per_file  # nrows / k rows per batch = c cycles per full dataset pass
+        self.total_cycles_per_epoch = self.nrows // self.rows_per_file_per_batch  # nrows / k rows per batch = c cycles per full dataset pass
 
     def shuffle_files(self):
         """Shuffle the file order at the start of each full dataset pass (epoch)."""
@@ -106,8 +106,8 @@ class HDF5Dataset(IterableDataset):
                 selected_files = self.files[i:i + self.files_per_batch]
 
                 # Select the next sequential k rows per file
-                start_idx = self.epoch_counter * self.rows_per_file
-                end_idx = start_idx + self.rows_per_file
+                start_idx = self.epoch_counter * self.rows_per_file_per_batch
+                end_idx = start_idx + self.rows_per_file_per_batch
 
                 for j, file in enumerate(selected_files):
                     with h5py.File(file, "r") as hdf:
