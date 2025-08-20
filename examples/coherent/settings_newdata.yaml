@@ -21,9 +21,9 @@ simulation_settings:
   # φ: Event-specific physics parameters (for each neutrino/particle event)
   phi_labels: ["fGenX","fGenY","fGenZ","fEventEnergy","fMomentumX","fMomentumY","fMomentumZ","fEDepNR","fEDepVeto"]
   # Target: Binary outcome for rare event detection (signal vs background)
-  target_headers: ["veto_active"]
+  target_headers: ["target_active"]
   target_range: [0,1]  # Binary: signal event detected (1) or background (0)
-  signal_condition: ["veto_active==1"]
+  signal_condition: ["target_active==1"]
   weights_labels: ["weights"]
   # Design parameter boundaries (from actual experimental data)  # need all of these for MFGP
   theta_min: [16.2, 10]    # Min: water_shielding=16.2mm (Veto4), veto_thickness=10mm (Veto1)
@@ -33,9 +33,9 @@ simulation_settings:
   hf_cost: 2000  # HF simulations much more expensive
 
 path_settings:
-  version: v104.0_coherent
+  version: v105.0_coherent
   path_to_files_train: "../coherent/in/data/processed_newdata/training/lf/"  # redirect to hdf5 file directory
-  path_to_files_predict: ["../coherent/in/data/processed_newdata/validation/lf/", "../coherent/in/data/processed_newdata/training/lf/"]  # redirect to hdf5 file directory
+  path_to_files_predict: ["../coherent/in/data/processed_newdata/validation/lf/"] #, "../coherent/in/data/processed_newdata/training/hf/"]  # redirect to hdf5 file directory
   iteration: [0,0]
   fidelity: [0,1]
   path_to_files_validation: ../coherent/out/cnp/cnp_v1.0_coherent_output_validation.csv

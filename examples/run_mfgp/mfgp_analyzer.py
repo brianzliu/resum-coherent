@@ -427,104 +427,75 @@ class MFGPAnalyzer:
         # Collect all data points from all files
         all_x_data = []
         all_y_data = []
-        
         for file_data in processed_data.values():
             for combo_key, group_data in file_data['theta_groups'].items():
                 all_x_data.extend([[combo_key[0], combo_key[1]]] * len(group_data['y_values']))
                 all_y_data.extend(group_data['y_values'])
-        
         all_x_data = np.array(all_x_data)
-        
         # Get parameter ranges
-        param_x_min, param_x_max = all_x_data[:, 1].min(), all_x_data[:, 1].max()  # veto_thickness_mm
-        param_y_min, param_y_max = all_x_data[:, 0].min(), all_x_data[:, 0].max()  # water_shielding_mm
-        
+        param_x_min, param_x_max = all_x_data[:, 1].min(), all_x_data[:, 1].max()
+        param_y_min, param_y_max = all_x_data[:, 0].min(), all_x_data[:, 0].max()
         # Create prediction grid
         x_vals = np.linspace(param_x_min, param_x_max, grid_steps)
         y_vals = np.linspace(param_y_min, param_y_max, grid_steps)
         Xg, Yg = np.meshgrid(x_vals, y_vals)
-        
         # Prepare points for prediction
         points = []
         for y in y_vals:
             for x in x_vals:
-                points.append([y, x])  # [water_shielding_mm, veto_thickness_mm]
-        
+                points.append([y, x])
         points = np.array(points)
         fidelity_col = np.ones((len(points), 1))
         points_with_fidelity = np.hstack([points, fidelity_col])
-        
         # Get predictions
         mean_pred, var_pred = self.mf_model.predict(points_with_fidelity)
         std_pred = np.sqrt(var_pred)
-        
         Z_mean = mean_pred.reshape(grid_steps, grid_steps)
         Z_std = std_pred.reshape(grid_steps, grid_steps)
-        
-        # Create enhanced plots - only 2 plots now
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6), constrained_layout=True)
-        
-        # Plot 1: Mean prediction
         contour1 = ax1.contourf(Xg, Yg, Z_mean, levels=levels, cmap='viridis')
         cbar1 = fig.colorbar(contour1, ax=ax1)
         cbar1.set_label(r"Predicted $y_{raw}$ (mean)", fontsize=12)
-        
-        # Add contour lines
         ax1.contour(Xg, Yg, Z_mean, levels=levels, colors='black', alpha=0.3, linewidths=0.5)
-        
-        # Overlay data from all files
         for file_name, file_data in processed_data.items():
             x_coords = []
             y_coords = []
             for combo_key in file_data['theta_groups'].keys():
-                x_coords.append(combo_key[1])  # veto_thickness_mm
-                y_coords.append(combo_key[0])  # water_shielding_mm
-            
-            # Use red for LF data points
-            ax1.scatter(x_coords, y_coords, c='red', s=100, 
-                       marker='o', edgecolors='black', linewidth=2, 
-                       label='LF Data', alpha=0.9, zorder=5)
-        
-        ax1.set_xlabel(self.x_labels[1], fontsize=12)  # veto_thickness_mm
-        ax1.set_ylabel(self.x_labels[0], fontsize=12)  # water_shielding_mm
+                x_coords.append(combo_key[1])
+                y_coords.append(combo_key[0])
+            # changed to black points with white border
+            ax1.scatter(x_coords, y_coords, c='black', s=100,
+                        marker='o', edgecolors='white', linewidth=1.5,
+                        label='LF Data', alpha=0.9, zorder=5)
+        ax1.set_xlabel(self.x_labels[1], fontsize=12)
+        ax1.set_ylabel(self.x_labels[0], fontsize=12)
         ax1.set_title('Mean Prediction', fontsize=14)
         ax1.legend(loc='upper right')
         ax1.grid(True, alpha=0.3)
-        
-        # Plot 2: Uncertainty map
         contour2 = ax2.contourf(Xg, Yg, Z_std, levels=levels, cmap='Reds')
         cbar2 = fig.colorbar(contour2, ax=ax2)
         cbar2.set_label(r"Uncertainty ($\sigma$)", fontsize=12)
-        
-        # Add contour lines
         ax2.contour(Xg, Yg, Z_std, levels=levels, colors='black', alpha=0.3, linewidths=0.5)
-        
-        # Overlay data from all files
         for file_name, file_data in processed_data.items():
             x_coords = []
             y_coords = []
             for combo_key in file_data['theta_groups'].keys():
-                x_coords.append(combo_key[1])  # veto_thickness_mm
-                y_coords.append(combo_key[0])  # water_shielding_mm
-            
-            # Use red for LF data points
-            ax2.scatter(x_coords, y_coords, c='red', s=100, 
-                       marker='o', edgecolors='black', linewidth=2, 
-                       label='LF Data', alpha=0.9, zorder=5)
-        
+                x_coords.append(combo_key[1])
+                y_coords.append(combo_key[0])
+            # changed to black points with white border
+            ax2.scatter(x_coords, y_coords, c='black', s=100,
+                        marker='o', edgecolors='white', linewidth=1.5,
+                        label='LF Data', alpha=0.9, zorder=5)
         ax2.set_xlabel(self.x_labels[1], fontsize=12)
         ax2.set_ylabel(self.x_labels[0], fontsize=12)
         ax2.set_title('Prediction Uncertainty', fontsize=14)
         ax2.legend(loc='upper right')
         ax2.grid(True, alpha=0.3)
-        
         if save_plots:
             save_path = self.output_dir / 'enhanced_contour_analysis.png'
             plt.savefig(save_path, dpi=300, bbox_inches='tight')
             print(f"Enhanced contour analysis saved: {save_path}")
-            
         plt.show()
-        
         return fig
     
     def plot_prediction_vs_true(self, predictions, file_name=None, save_plot=True):
@@ -619,124 +590,106 @@ class MFGPAnalyzer:
     
     def plot_uncertainty_bands_across_thetas(self, predictions, processed_data, file_name=None, save_plot=True):
         """
-        Plot uncertainty bands across all theta values for a given file, resembling the screenshot.
+        Plot uncertainty bands across all theta values for a given file.
 
-        Parameters:
-        -----------
-        predictions : dict
-            Dictionary returned by predict_for_theta_groups().
-        processed_data : dict
-            Dictionary returned by load_and_process_csv_files().
-        file_name : str, optional
-            Specific file to plot (default: first file).
-        save_plot : bool
-            Whether to save the plot to disk.
+        Compact layout with condensed tick labels (ws|vt). Fixed overlapping x-axis labels
+        by simplifying xlabel and removing bottom annotation.
         """
         if file_name is None:
             file_name = list(predictions.keys())[0]
-
         file_preds = predictions[file_name]
         file_proc_data = processed_data[file_name]
-
-        # Sort theta combinations to ensure consistent ordering and handle missing pairs
         sorted_thetas = sorted(file_preds.keys())
-
         y_true_means = []
         y_pred_means = []
         y_pred_stds = []
-
+        ws_vals = []
+        vt_vals = []
         for theta in sorted_thetas:
-            # Average out the y_raw for the true data points
+            ws_vals.append(theta[0])
+            vt_vals.append(theta[1])
             y_true_values = file_proc_data['theta_groups'][theta]['y_values']
             y_true_means.append(np.mean(y_true_values))
-
-            # Get prediction data
             pred_data = file_preds[theta]
             y_pred_means.append(pred_data['y_pred_mean'])
             y_pred_stds.append(pred_data['y_pred_std'])
-
         y_true_means = np.array(y_true_means)
         y_pred_means = np.array(y_pred_means)
         y_pred_stds = np.array(y_pred_stds)
-
-        # Create a simple non-skipping index for plotting
-        idx = np.arange(len(sorted_thetas))
-
-        plt.figure(figsize=(12, 4))
-
-        # Plot uncertainty bands using colors from the original plot
-        plt.fill_between(idx, y_pred_means - 3 * y_pred_stds, y_pred_means + 3 * y_pred_stds,
+        n_thetas = len(sorted_thetas)
+        x_idx = np.arange(n_thetas)
+        fig_width = min(14, max(8, 2 + 0.18 * n_thetas))
+        fig_height = 5.5
+        plt.figure(figsize=(fig_width, fig_height))
+        ax = plt.gca()
+        ax.fill_between(x_idx, y_pred_means - 3 * y_pred_stds, y_pred_means + 3 * y_pred_stds,
                          facecolor='r', alpha=0.1, label='±3σ')
-        plt.fill_between(idx, y_pred_means - 2 * y_pred_stds, y_pred_means + 2 * y_pred_stds,
+        ax.fill_between(x_idx, y_pred_means - 2 * y_pred_stds, y_pred_means + 2 * y_pred_stds,
                          facecolor='y', alpha=0.15, label='±2σ')
-        plt.fill_between(idx, y_pred_means - 1 * y_pred_stds, y_pred_means + 1 * y_pred_stds,
+        ax.fill_between(x_idx, y_pred_means - 1 * y_pred_stds, y_pred_means + 1 * y_pred_stds,
                          facecolor='g', alpha=0.2, label='RESuM ±1σ')
-
-        # Plot actual data points (averaged y_raw)
-        plt.scatter(idx, y_true_means, color='k', s=20, label='HF Validation Data', zorder=5)
-
-        plt.xlabel('Simulation Trial Index')
-        plt.ylabel(f'Average $y_{{raw}}$')
-        plt.title(f'MFGP Predictions Across Theta Values | File: {Path(file_name).stem}')
-
-        # Custom legend order (inside the chart like plot_uncertainty_bands_for_theta_group)
-        handles, labels = plt.gca().get_legend_handles_labels()
-        
-        # Reorder to put HF Validation Data first, then uncertainty bands
-        desired_order = ['HF Validation Data', 'RESuM ±1σ', '±2σ', '±3σ']
+        # changed point color to black (edge white for consistency with contour plots)
+        ax.scatter(x_idx, y_true_means, color='black', linewidth=0.6,
+                   s=28, label='HF Validation Mean', zorder=5)
+        def choose_fmt(vals):
+            arr = np.asarray(vals)
+            if np.all(np.abs(arr - np.round(arr)) < 1e-6):
+                return '{:.0f}'
+            return '{:.1f}'
+        ws_fmt = choose_fmt(ws_vals)
+        vt_fmt = choose_fmt(vt_vals)
+        base_labels = [f"{ws_fmt.format(ws)}|{vt_fmt.format(vt)}" for ws, vt in zip(ws_vals, vt_vals)]
+        if n_thetas > 45:
+            step = int(np.ceil(n_thetas / 45))
+        elif n_thetas > 30:
+            step = 2
+        else:
+            step = 1
+        display_labels = [lab if (i % step == 0) else '' for i, lab in enumerate(base_labels)]
+        ax.set_xticks(x_idx)
+        ax.set_xticklabels(display_labels, rotation=55, ha='right', fontsize=8)
+        if n_thetas <= 120:
+            last_ws = ws_vals[0]
+            for i, ws in enumerate(ws_vals):
+                if ws != last_ws:
+                    ax.axvline(i - 0.5, color='gray', linestyle=':', alpha=0.25, linewidth=0.8)
+                    last_ws = ws
+        ax.set_xlabel(f"Theta index (labels: {self.x_labels[0]}|{self.x_labels[1]}; every {step} shown)")
+        ax.set_ylabel(f'Average {self.y_label_sim}')
+        ax.set_title(f'MFGP Predictions Across Theta Values\nFile: {Path(file_name).stem}', pad=12)
+        handles, labels = ax.get_legend_handles_labels()
+        desired_order = ['HF Validation Mean', 'RESuM ±1σ', '±2σ', '±3σ']
         order_map = {label: i for i, label in enumerate(desired_order)}
-        
         try:
-            # Sort handles and labels based on the desired order
             sorted_handles_labels = sorted(zip(handles, labels), key=lambda x: order_map.get(x[1], 99))
             sorted_handles, sorted_labels = zip(*sorted_handles_labels)
-            plt.legend(sorted_handles, sorted_labels, ncol=4, loc='upper right', fontsize=10)
-        except (ValueError, KeyError):
-             # if a label is not found, just use the default legend
-            plt.legend(ncol=4, loc='upper right', fontsize=10)
-
-        plt.grid(True, alpha=0.3)
-        
-        # Set y-axis limits with better scaling - zoom in more to reduce white space
+            ax.legend(sorted_handles, sorted_labels, ncol=4, loc='upper right', fontsize=9)
+        except Exception:
+            ax.legend(ncol=4, loc='upper right', fontsize=9)
+        ax.grid(True, alpha=0.3)
         y_min = min(np.min(y_true_means), np.min(y_pred_means - 3 * y_pred_stds))
         y_max = max(np.max(y_true_means), np.max(y_pred_means + 3 * y_pred_stds))
-        y_range = y_max - y_min
-        plt.ylim(y_min - 0.05 * y_range, y_max + 0.1 * y_range)  # Small padding, less on bottom
-        
-        # Calculate coverage statistics based on averaged y_raw values vs uncertainty bands
+        y_range = y_max - y_min if y_max > y_min else 1.0
+        ax.set_ylim(y_min - 0.05 * y_range, y_max + 0.08 * y_range)
         coverage_text = []
         for sigma in [1, 2, 3]:
             within_sigma = 0
-            for i, theta in enumerate(sorted_thetas):
-                y_true_mean = y_true_means[i]
-                y_pred_mean = y_pred_means[i]
-                y_pred_std = y_pred_stds[i]
-                
-                # Check if averaged y_raw is within sigma bands
-                lower_bound = y_pred_mean - sigma * y_pred_std
-                upper_bound = y_pred_mean + sigma * y_pred_std
-                
-                if lower_bound <= y_true_mean <= upper_bound:
+            for i in range(n_thetas):
+                lower = y_pred_means[i] - sigma * y_pred_stds[i]
+                upper = y_pred_means[i] + sigma * y_pred_stds[i]
+                if lower <= y_true_means[i] <= upper:
                     within_sigma += 1
-            
-            total_thetas = len(sorted_thetas)
-            percentage = 100 * within_sigma / total_thetas
-            coverage_text.append(f"±{sigma}σ: {within_sigma}/{total_thetas} ({percentage:.1f}%)")
-        
-        # Add coverage statistics as text box
-        text_str = "Coverage Statistics:\n" + "\n".join(coverage_text)
-        plt.text(0.02, 0.98, text_str, transform=plt.gca().transAxes, 
-                verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.9),
-                fontsize=10, family='monospace')
-        
+            pct = 100 * within_sigma / n_thetas if n_thetas else 0.0
+            coverage_text.append(f"±{sigma}σ: {within_sigma}/{n_thetas} ({pct:.1f}%)")
+        text_str = "Coverage:\n" + "\n".join(coverage_text)
+        ax.text(0.01, 0.99, text_str, transform=ax.transAxes, va='top',
+                bbox=dict(boxstyle='round', facecolor='white', alpha=0.9), fontsize=9, family='monospace')
         plt.tight_layout()
-
         if save_plot:
             filename = f'uncertainty_bands_across_thetas_{Path(file_name).stem}.png'
             save_path = self.output_dir / filename
             plt.savefig(save_path, dpi=300, bbox_inches='tight')
             print(f"    Saved plot: {save_path}")
-
         plt.show()
 
     def run_complete_analysis(self, file_patterns, fidelity_filter=1.0, iteration_filter=0, 

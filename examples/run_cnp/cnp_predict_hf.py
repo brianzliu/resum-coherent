@@ -193,8 +193,8 @@ except Exception as e:
 import os
 
 # Rename the coherent output file to include 20epochs_hf suffix
-old_file = '/home/bliu4/resum-coherent2/examples/coherent/out/cnp/newdata/cnp_v103.0_coherent_output.csv'
-new_file = '/home/bliu4/resum-coherent2/examples/coherent/out/cnp/newdata/cnp_v103.0_coherent_output_valid_20epochs.csv'
+old_file = '/home/bliu4/resum-coherent2/examples/coherent/out/cnp/newdata/cnp_v105.0_coherent_output.csv'
+new_file = '/home/bliu4/resum-coherent2/examples/coherent/out/cnp/newdata/cnp_v105.0_coherent_output_valid_20epochs.csv'
 
 if os.path.exists(old_file):
     os.rename(old_file, new_file)
