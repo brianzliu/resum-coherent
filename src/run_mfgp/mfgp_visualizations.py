@@ -658,7 +658,7 @@ class MFGPAnalyzer:
         ax.set_ylabel(f'Average {self.y_label_sim}')
 
         handles, labels = ax.get_legend_handles_labels()
-        desired_order = ['HF Validation Mean', 'RESuM ±1σ', '±2σ', '±3σ']
+        desired_order = ['LF Validation Mean', 'RESuM ±1σ', '±2σ', '±3σ']
         order_map = {label: i for i, label in enumerate(desired_order)}
         try:
             sorted_handles_labels = sorted(zip(handles, labels), key=lambda x: order_map.get(x[1], 99))

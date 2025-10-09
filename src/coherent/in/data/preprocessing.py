@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Script to extract resum_dataset.tar.gz and organize CSV files into appropriate directories.
+Script to extract coherent_dataset.tar.gz and organize CSV files into appropriate directories.
 File mappings are hardcoded based on the processed_newdata directory structure.
 Also creates corresponding h5 files for each CSV file.
 """
@@ -20,8 +20,8 @@ except ImportError:
     import h5py
 
 # Define paths
-BASE_DIR = Path(".")
-TARBALL_PATH = BASE_DIR / "resum_dataset.tar.gz"
+BASE_DIR = Path(__file__).parent  # Use script's directory instead of current working directory
+TARBALL_PATH = BASE_DIR / "coherent_dataset.tar.gz"
 TEMP_EXTRACT_DIR = BASE_DIR / "temp_extracted"
 
 # Target directories
@@ -30,6 +30,14 @@ TARGET_DIRS = {
     "training/lf": BASE_DIR / "training" / "lf",
     "validation/lf": BASE_DIR / "validation" / "lf",
 }
+
+# Additional directories to create (relative to data directory)
+ADDITIONAL_DIRS = [
+    BASE_DIR / ".." / ".." / "out" / "cnp",  # coherent/out/cnp
+    BASE_DIR / ".." / ".." / "out" / "mfgp",  # coherent/out/mfgp
+    BASE_DIR / ".." / ".." / "out" / "pce",  # coherent/out/pce
+    BASE_DIR / ".." / "mfgp",  # coherent/in/mfgp
+]
 
 # Hardcoded file mappings based on processed_newdata structure
 TRAINING_HF_FILES = [
@@ -216,7 +224,7 @@ def create_h5_from_csv(csv_file_path):
         hdf.create_dataset("phi", data=phi_data, compression="gzip")
         hdf.create_dataset("phi_labels", data=np.array(phi_headers, dtype='S'), compression="gzip")
         hdf.create_dataset("target", data=target_data, compression="gzip")
-        hdf.create_dataset("target_labels", data=np.array(target_label, dtype='S'), compression="gzip")
+        hdf.create_dataset("target_headers", data=np.array(target_label, dtype='S'), compression="gzip")
         hdf.create_dataset("weights", data=weights_data, compression="gzip")
         hdf.create_dataset("weights_labels", data=np.array(weights_labels, dtype='S'), compression="gzip")
     
@@ -228,6 +236,11 @@ def create_target_directories():
     for target_dir in TARGET_DIRS.values():
         target_dir.mkdir(parents=True, exist_ok=True)
         print(f"✓ Ensured directory exists: {target_dir}")
+    
+    # Create additional directories
+    for additional_dir in ADDITIONAL_DIRS:
+        additional_dir.mkdir(parents=True, exist_ok=True)
+        print(f"✓ Ensured directory exists: {additional_dir}")
 
 
 def extract_tarball():

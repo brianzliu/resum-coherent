@@ -255,6 +255,7 @@ dependencies:
       - rich==14.0.0
       - scikit-learn==1.6.1
       - scipy==1.12.0
+      - seaborn==0.13.2
       - shap==0.41.0
       - sklearn-compat==0.1.3
       - snap==0.5
@@ -264,4 +265,5 @@ dependencies:
       - torchaudio
       - xarray==2025.6.1
       - xarray-einstats==0.9.1
-prefix: /home/tidmad/miniconda3/envs/coherent2
+      - -e /home/tidmad/bliu/resum-coherent
+prefix: /home/tidmad/miniconda3/envs/coherent

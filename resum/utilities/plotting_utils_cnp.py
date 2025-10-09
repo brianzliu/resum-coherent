@@ -248,35 +248,6 @@ def get_marginialized_all(config_file, grid_steps=100):
         markers=['.','s','o''x']
         grid_steps = 100
 
-<<<<<<< Updated upstream
-        fig, axes = plt.subplots(n_rows, n_cols, figsize=(6 * n_cols, 4 * n_rows), squeeze=False)
-
-        for i, param in enumerate(x_labels):
-                for f in range(len(x_data)):
-                        row = i // n_cols
-                        col = i % n_cols
-                        ax1 = axes[row][col]
-
-                        # Get marginalized draws
-                        x_cnp, y_cnp,_,_ = get_marginalized(x_data=x_data[f], y_data=y_data[f], x_min=x_min[i], x_max=x_max[i], keep_axis=i, grid_steps=grid_steps)
-                        x_raw, y_raw,_,_ = get_marginalized(x_data=x_data[f], y_data=y_sim[f],  x_min=x_min[i], x_max=x_max[i], keep_axis=i, grid_steps=grid_steps)
-
-                        # Plot on first axis
-                        p1 = ax1.scatter(x_cnp, y_cnp, color=colors[f][0],alpha=1., marker=markers[f])
-                        if (f==0):
-                                ax1.set_ylabel('$y_{cnp}$', color=colors[f][0])
-                                ax1.tick_params(axis='y', labelcolor=colors[f][0])
-                                ax1.set_xlabel(param)
-                                ax1.set_ylim(y_data_min*0.9,y_data_max*1.005)
-                                ax2 = ax1.twinx()
-                                ax2.set_ylabel('$y_{raw}$', color=colors[f][1])
-                                ax2.set_ylim(y_sim_min*0.8,y_sim_max*1.005)
-                                ax2.tick_params(axis='y', labelcolor=colors[f][1])
-
-                        # Plot on second axis
-                        
-                        p2 = ax2.scatter(x_raw, y_raw, color=colors[f][1],alpha=1., marker=markers[f])
-=======
         # Check if we have any valid data
         if len(x_data) == 0:
             print("No valid data found for plotting")
@@ -326,24 +297,12 @@ def get_marginialized_all(config_file, grid_steps=100):
                 # Plot raw simulation data on right axis
                 if ax2 is not None:
                         ax2.scatter(x_raw, y_raw, color=colors[f][1], alpha=1., marker=markers[f], s=28)
->>>>>>> Stashed changes
 
         ax1.grid(True, alpha=0.3)
 
         # Create legend with original style
         handles = []
         for j in range(len(x_data)):
-<<<<<<< Updated upstream
-                handles.append(mlines.Line2D([], [], color=colors[j][0], marker=markers[j], linestyle='None', label='$y_{cnp}$'+f'(f={j})'))
-                handles.append( mlines.Line2D([], [], color=colors[j][1], marker=markers[j], linestyle='None', label='$y_{raw}$'+f'(f={j})'))
-        fig.legend(
-                handles=handles,
-                loc='lower center',
-                ncol=2*len(x_data),
-                title='',
-                bbox_to_anchor=(0.5, -0.05)
-                )
-=======
                 handles.append(mlines.Line2D([], [], color=colors[j][0], marker=markers[j], linestyle='None', label='$y_{cnp}$'))
                 handles.append(mlines.Line2D([], [], color=colors[j][1], marker=markers[j], linestyle='None', label='$y_{raw}$'))
         
@@ -355,7 +314,6 @@ def get_marginialized_all(config_file, grid_steps=100):
                         title='',
                         bbox_to_anchor=(0.94, 0.98)
                         )
->>>>>>> Stashed changes
 
         # Adjust layout
         plt.tight_layout()

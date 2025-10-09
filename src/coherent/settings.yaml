@@ -33,12 +33,12 @@ simulation_settings:
   hf_cost: 2000  # HF simulations much more expensive
 
 path_settings:
-  version: v105.0_coherent
-  path_to_files_train: "./in/data/training/lf/"  
-  path_to_files_predict: ["./in/data/validation/lf"] #, "./in/data/training/hf/"]  # use validation lf only for mfgp, training lf and hf for cnp
+  version: v1.0
+  path_to_files_train: "../coherent/in/data/training/lf/"  
+  path_to_files_predict: ["../coherent/in/data/validation/lf"] #, "../coherent/in/data/training/hf/"]  # use validation lf only for mfgp, training lf and hf for cnp
   iteration: [0,0]
   fidelity: [0,1]
-  path_to_files_validation: ../coherent/out/cnp/cnp_v1.0_coherent_output_validation.csv
-  path_out_cnp:  ../coherent/out/cnp/
-  path_out_mfgp:  ../coherent/out/mfgp/
-  path_out_pce: ../coherent/out/pce/ 
+  path_to_files_validation: "../coherent/out/cnp/cnp_v1.0_output_validation.csv"
+  path_out_cnp:  ../coherent/out/cnp
+  path_out_mfgp:  ../coherent/out/mfgp
+  path_out_pce: ../coherent/out/pce
