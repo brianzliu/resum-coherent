@@ -1,4 +1,4 @@
-name: coherent2
+name: coherent
 channels:
   - defaults
   - pytorch
