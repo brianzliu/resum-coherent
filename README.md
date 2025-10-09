@@ -36,7 +36,7 @@ This demonstrates RESuM's potential to accelerate design optimization for a broa
 
 ## Installation and Setup
 
-### Step 0: Create Conda Environment
+### Step 1: Create Conda Environment
 
 Create a new conda environment using the provided environment file:
 ```bash
@@ -44,20 +44,20 @@ conda env create -f coherent_environment.yml
 conda activate coherent
 ```
 
-### Step 1: Download Dataset
+### Step 2: Download Dataset
 
 Download the COHERENT dataset from Zenodo:
 - **Dataset URL**: [https://zenodo.org/records/17299286](https://zenodo.org/records/17299286)
 - **File**: `coherent_dataset.tar.gz` (496.5 MB)
 
-### Step 2: Place Dataset
+### Step 3: Place Dataset
 
 Move the downloaded tarball to the data directory:
 ```bash
 mv coherent_dataset.tar.gz src/coherent/in/data/
 ```
 
-### Step 3: Preprocess Data
+### Step 4: Preprocess Data
 
 Run the preprocessing script to extract and organize the dataset:
 ```bash
@@ -70,7 +70,7 @@ This script will:
 - Create output directories (`out/cnp`, `out/mfgp`, `out/pce`)
 - Generate corresponding HDF5 files for all CSV data
 
-### Step 4: Run Analysis Pipeline
+### Step 5: Run Analysis Pipeline
 
 Execute the Jupyter notebooks in the following order:
 
