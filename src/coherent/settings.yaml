@@ -1,0 +1,44 @@
+cnp_settings:
+  training_epochs: 20
+  context_ratio: 0.3333333
+  context_is_subset: True
+  batch_size_train: 3000
+  files_per_batch_train: 50
+  batch_size_predict: [1000, 5000] # [50000,10000000]  # might have to change these values and make them smaller, especially for high fidelity
+  files_per_batch_predict: 1
+  number_of_walkers: 1
+  config_wise: False
+  use_data_augmentation: "mixup" #"smote" #False #"mixup"
+  use_beta: [0.1,0.1] # uniform => None, beta => [a,b] U-shape [0.1,0.1] Uniform [1.,1.] falling [0.2,0.5] rising [0.2,0.5]
+  signal_to_background_ratio: "" # "_1to4" # used for smote augmentation
+  ratio_testing_vs_training: 1/40
+  plot_after: 1000  # Increased from 200 to 1000 to reduce plotting overhead for HF data
+
+simulation_settings:
+  # Coherent neutrino scattering detector design optimization
+  # θ: Design parameters to be optimized (actual experimental variables)
+  theta_headers: ["water_shielding_mm","veto_thickness_mm"]
+  # φ: Event-specific physics parameters (for each neutrino/particle event)
+  phi_labels: ["fGenX","fGenY","fGenZ","fEventEnergy","fMomentumX","fMomentumY","fMomentumZ","fEDepNR","fEDepVeto"]
+  # Target: Binary outcome for rare event detection (signal vs background)
+  target_headers: ["target_active"]
+  target_range: [0,1]  # Binary: signal event detected (1) or background (0)
+  signal_condition: ["target_active==1"] # (veto_active==0 & detector_active==1)
+  weights_labels: ["weights"]
+  # Design parameter boundaries (from actual experimental data)  # need all of these for MFGP
+  theta_min: [16.2, 10]    # Min: water_shielding=16.2mm (Veto4), veto_thickness=10mm (Veto1)
+  theta_max: [116.2, 110]  # Max: water_shielding=116.2mm (Veto1), veto_thickness=110mm (Veto4)
+  theta_fixed: [76.2, 50]  # Baseline configuration
+  lf_cost: 1
+  hf_cost: 2000  # HF simulations much more expensive
+
+path_settings:
+  version: v105.0_coherent
+  path_to_files_train: "./in/data/training/lf/"  
+  path_to_files_predict: ["./in/data/validation/lf"] #, "./in/data/training/hf/"]  # use validation lf only for mfgp, training lf and hf for cnp
+  iteration: [0,0]
+  fidelity: [0,1]
+  path_to_files_validation: ../coherent/out/cnp/cnp_v1.0_coherent_output_validation.csv
+  path_out_cnp:  ../coherent/out/cnp/
+  path_out_mfgp:  ../coherent/out/mfgp/
+  path_out_pce: ../coherent/out/pce/ 

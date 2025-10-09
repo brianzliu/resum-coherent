@@ -247,10 +247,8 @@ def get_marginialized_all(config_file, grid_steps=100):
         colors=[["salmon","darkturquoise"],["darkred","teal"],["orangedred","darkslategrey"]]
         markers=['.','s','o''x']
         grid_steps = 100
-        n_params = len(x_labels)
-        n_cols = 2
-        n_rows = int(np.ceil(n_params / n_cols))
 
+<<<<<<< Updated upstream
         fig, axes = plt.subplots(n_rows, n_cols, figsize=(6 * n_cols, 4 * n_rows), squeeze=False)
 
         for i, param in enumerate(x_labels):
@@ -278,10 +276,64 @@ def get_marginialized_all(config_file, grid_steps=100):
                         # Plot on second axis
                         
                         p2 = ax2.scatter(x_raw, y_raw, color=colors[f][1],alpha=1., marker=markers[f])
+=======
+        # Check if we have any valid data
+        if len(x_data) == 0:
+            print("No valid data found for plotting")
+            fig, ax = plt.subplots(1, 1, figsize=(14, 5.5))
+            ax.text(0.5, 0.5, 'No data available for plotting', 
+                   horizontalalignment='center', verticalalignment='center', 
+                   transform=ax.transAxes, fontsize=14)
+            return fig
 
+        # Create single plot with MFGP-style aspect ratio
+        fig, ax1 = plt.subplots(1, 1, figsize=(14, 5.5))
 
+        # Only plot the first parameter (index 0)
+        param = x_labels[0]
+        i = 0  # First parameter index
+        ax2 = None  # Initialize ax2
+        
+        for f in range(len(x_data)):
+                # Get marginalized draws for first parameter only
+                x_cnp, y_cnp,_,_ = get_marginalized(x_data=x_data[f], y_data=y_data[f], x_min=x_min[i], x_max=x_max[i], keep_axis=i, grid_steps=grid_steps)
+                x_raw, y_raw,_,_ = get_marginalized(x_data=x_data[f], y_data=y_sim[f],  x_min=x_min[i], x_max=x_max[i], keep_axis=i, grid_steps=grid_steps)
+
+                # Plot CNP predictions on left axis
+                ax1.scatter(x_cnp, y_cnp, color=colors[f][0], alpha=1., marker=markers[f], s=28)
+                
+                if f == 0:
+                        ax1.set_ylabel('$y_{cnp}$', color=colors[f][0], fontsize=12)
+                        ax1.tick_params(axis='y', labelcolor=colors[f][0])
+                        ax1.set_xlabel('water_shielding_mm, veto_thickness_mm', fontsize=12)
+                        ax1.set_ylim(y_data_min*0.9, y_data_max*1.005)
+                        
+                        # Create evenly distributed ticks within the actual data range
+                        n_ticks = 6  # Number of ticks to show
+                        x_tick_positions = np.linspace(x_min[i], x_max[i], n_ticks)
+                        x_tick_labels = []
+                        for tick in x_tick_positions:
+                                new_value = 126.2 - tick
+                                x_tick_labels.append(f'{tick:.1f}, {new_value:.1f}')
+                        ax1.set_xticks(x_tick_positions)
+                        ax1.set_xticklabels(x_tick_labels)
+                        
+                        ax2 = ax1.twinx()
+                        ax2.set_ylabel('$y_{raw}$', color=colors[f][1], fontsize=12)
+                        ax2.set_ylim(y_sim_min*0.8, y_sim_max*1.005)
+                        ax2.tick_params(axis='y', labelcolor=colors[f][1])
+
+                # Plot raw simulation data on right axis
+                if ax2 is not None:
+                        ax2.scatter(x_raw, y_raw, color=colors[f][1], alpha=1., marker=markers[f], s=28)
+>>>>>>> Stashed changes
+
+        ax1.grid(True, alpha=0.3)
+
+        # Create legend with original style
         handles = []
         for j in range(len(x_data)):
+<<<<<<< Updated upstream
                 handles.append(mlines.Line2D([], [], color=colors[j][0], marker=markers[j], linestyle='None', label='$y_{cnp}$'+f'(f={j})'))
                 handles.append( mlines.Line2D([], [], color=colors[j][1], marker=markers[j], linestyle='None', label='$y_{raw}$'+f'(f={j})'))
         fig.legend(
@@ -291,6 +343,19 @@ def get_marginialized_all(config_file, grid_steps=100):
                 title='',
                 bbox_to_anchor=(0.5, -0.05)
                 )
+=======
+                handles.append(mlines.Line2D([], [], color=colors[j][0], marker=markers[j], linestyle='None', label='$y_{cnp}$'))
+                handles.append(mlines.Line2D([], [], color=colors[j][1], marker=markers[j], linestyle='None', label='$y_{raw}$'))
+        
+        if len(handles) > 0:
+                fig.legend(
+                        handles=handles,
+                        loc='upper right',
+                        ncol=2*len(x_data),
+                        title='',
+                        bbox_to_anchor=(0.94, 0.98)
+                        )
+>>>>>>> Stashed changes
 
         # Adjust layout
         plt.tight_layout()

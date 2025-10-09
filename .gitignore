@@ -1,8 +1,12 @@
 dist/
 resum.egg-info/
-examples/legend-neutron-moderator/in/data/lf/neutron.csv
-examples/legend-neutron-moderator/in/data/lf/neutron.h5
 
-examples/coherent/in/data/lf/*.csv
-examples/coherent/in/data/hf/*.csv
-examples/coherent/in/data/processed/
+src/coherent/in/data/training/hf/*.csv
+src/coherent/in/data/training/lf/*.csv
+src/coherent/in/data/validation/lf/*.csv
+
+src/coherent/in/data/training/hf/*.h5
+src/coherent/in/data/training/lf/*.h5
+src/coherent/in/data/validation/lf/*.h5
+
+src/coherent/in/data/coherent_dataset.tar.gz
